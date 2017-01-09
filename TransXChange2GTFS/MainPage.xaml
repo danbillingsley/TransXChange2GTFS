@@ -6,42 +6,84 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
+    
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        <StackPanel x:Name="LeftPanel" Grid.Column="0" Margin="5">
-            <Button Content="Pick TransXChange XML file" x:Name="pickFileButton" Tapped="pickFileButton_Tapped"/>
-            <TextBlock>XML (shortened extract)</TextBlock>
-            <TextBox x:Name="XMLHolder" Height="240" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>JSON (shortened extract)</TextBlock>
-            <TextBox x:Name="JSONHolder" Height="240" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>Service Name</TextBlock>
-            <TextBox x:Name="ServiceName" Height="40" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>Service Description</TextBlock>
-            <TextBox x:Name="ServiceDescription" Height="40" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <StackPanel Orientation="Horizontal" Margin="0,50,0,0">
-                <ProgressRing x:Name="Progress" Margin="0,0,5,0"/>
-                <TextBlock x:Name="ProgressText"></TextBlock>
-            </StackPanel>
-        </StackPanel>
-        <StackPanel Grid.Column="1" Margin="5">
-            <TextBlock>agency.txt</TextBlock>
-            <TextBox x:Name="Agency" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>routes.txt</TextBlock>
-            <TextBox x:Name="Routes" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>trips.txt</TextBlock>
-            <TextBox x:Name="Trips" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>calendar.txt</TextBlock>
-            <TextBox x:Name="Calendar" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>calendar_dates.txt</TextBlock>
-            <TextBox x:Name="CalendarDates" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>stop_times.txt</TextBlock>
-            <TextBox x:Name="StopTimes" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <TextBlock>stops.txt</TextBlock>
-            <TextBox x:Name="Stops" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
-        </StackPanel>
+
+        <Pivot Grid.Row="2">
+            <PivotItem Header="Batch">
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel x:Name="batchPage" Grid.Column="0" Margin="5">
+                        <TextBlock Margin="0,10,0,15" FontSize="28pt" FontWeight="Bold">TransXchange to GTFS parser</TextBlock>
+                        <TextBlock Margin="0,0,0,5">Quickly batch convert TransXchange format bus timetables to GTFS format. Click the button below to select a folder containing XML files to convert.</TextBlock>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Pick folder" x:Name="pickFolderButton" Tapped="pickFolderButton_Tapped" Margin="5"/>
+                            <StackPanel x:Name="saveContent" Orientation="Horizontal" Visibility="Collapsed">
+                                <Button Content="Save generated GTFS files" x:Name="pickSaveLocationButton" Tapped="saveLocationButton_Tapped"  Margin="5"/>
+                                <StackPanel Orientation="Horizontal" Margin="15,10,0,0">
+                                    <ProgressRing x:Name="saveProgress"/>
+                                    <TextBlock x:Name="saveProgressText"></TextBlock>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel x:Name="progressIndicator" Orientation="Vertical" Visibility="Collapsed">
+                            <TextBlock x:Name="fileReading" Margin="0,10,0,2" FontSize="12pt">Currently reading</TextBlock>
+                            <ProgressBar x:Name="progressBar" Height="9" Width="600" HorizontalAlignment="Left"/>
+                        </StackPanel>
+                        <TextBlock x:Name="completionText" Margin="0,10,0,40" FontSize="16pt" FontWeight="Bold"></TextBlock>
+                    </StackPanel>
+                </Grid>
+
+            </PivotItem>
+            <PivotItem Header="Detail">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel x:Name="LeftPanel" Grid.Column="0" Margin="5">
+                        <TextBlock>XML (shortened extract)</TextBlock>
+                        <TextBox x:Name="XMLHolder" Height="240" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>JSON (shortened extract)</TextBlock>
+                        <TextBox x:Name="JSONHolder" Height="240" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>Service Name</TextBlock>
+                        <TextBox x:Name="ServiceName" Height="40" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>Service Description</TextBlock>
+                        <TextBox x:Name="ServiceDescription" Height="40" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,50,0,0">
+                            <ProgressRing x:Name="Progress" Margin="0,0,5,0"/>
+                            <TextBlock x:Name="ProgressText"></TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="5">
+                        <TextBlock>agency.txt</TextBlock>
+                        <TextBox x:Name="Agency" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>routes.txt</TextBlock>
+                        <TextBox x:Name="Routes" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>trips.txt</TextBlock>
+                        <TextBox x:Name="Trips" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>calendar.txt</TextBlock>
+                        <TextBox x:Name="Calendar" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>calendar_dates.txt</TextBlock>
+                        <TextBox x:Name="CalendarDates" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>stop_times.txt</TextBlock>
+                        <TextBox x:Name="StopTimes" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBlock>stops.txt</TextBlock>
+                        <TextBox x:Name="Stops" Height="120" TextWrapping="Wrap" AcceptsReturn="True"/>
+                    </StackPanel>
+                </Grid>
+
+
+
+            </PivotItem>
+        </Pivot>
+
     </Grid>
 </Page>

@@ -37,6 +37,15 @@ namespace TransXChange2GTFS
         List<string> calendarArray;
         List<string> calendar_datesArray;
 
+        // Batch list populated from the contents of single XML files.
+        List<string> batchStopsArray;
+        List<string> batchAgencyArray;
+        List<string> batchRoutesArray;
+        List<string> batchStop_timesArray;
+        List<string> batchTripsArray;
+        List<string> batchCalendarArray;
+        List<string> batchCalendar_datesArray;
+
         public MainPage()
         {
             this.InitializeComponent();            
@@ -51,27 +60,131 @@ namespace TransXChange2GTFS
                 foreach (var stopline in busStopsArray)
                 {
                     string busStopID = stopline.Split(new string[] { "," }, StringSplitOptions.None)[0];
-                    busstopDictionary.Add(busStopID, stopline);
+                   // busstopDictionary.Add(busStopID, stopline);
+                    busstopDictionary[busStopID] = stopline;
                 }
             }
         }
 
-        private async void pickFileButton_Tapped(object sender, TappedRoutedEventArgs e)
+        private async void saveLocationButton_Tapped(object sender, TappedRoutedEventArgs e)
         {
-            // select an xml file
-            FileOpenPicker openPicker = new FileOpenPicker();
-            openPicker.ViewMode = PickerViewMode.List;
-            openPicker.FileTypeFilter.Add(".xml");
-            StorageFile file = await openPicker.PickSingleFileAsync();
-            if (file != null)
+            FolderPicker savePicker = new FolderPicker();
+            savePicker.ViewMode = PickerViewMode.List;
+            savePicker.FileTypeFilter.Add(".txt");
+            StorageFolder saveFolder = await savePicker.PickSingleFolderAsync();
+            if (saveFolder != null)
             {
-                resetArrayFunction();
-                clearUI();
-                readAndParseXML(file);
+                // Application now has read/write access to all contents in the picked folder
+                // (including other sub-folder contents)
+                Windows.Storage.AccessCache.StorageApplicationPermissions.
+                FutureAccessList.AddOrReplace("PickedFolderToken", saveFolder);
+            
+                saveProgress.IsActive = true;
+                saveProgressText.Text = "Saving agency.txt";
+                // Remove possible duplicates in agency list before saving
+                batchAgencyArray = batchAgencyArray.Distinct().ToList();
+                await Task.Run(() =>
+                {
+                    File.WriteAllLines(saveFolder.Path + "\\agency.txt", batchAgencyArray);
+                });
+                saveProgressText.Text = "Saving routes.txt";
+                await Task.Run(() =>
+                {
+                    File.WriteAllLines(saveFolder.Path + "\\routes.txt", batchRoutesArray);
+                });
+                saveProgressText.Text = "Saving stop_times.txt";
+                await Task.Run(() =>
+                {
+                    File.WriteAllLines(saveFolder.Path + "\\stop_times.txt", batchStop_timesArray);
+                });
+                    saveProgressText.Text = "Saving trips.txt";
+                await Task.Run(() =>
+                {
+                    File.WriteAllLines(saveFolder.Path + "\\trips.txt", batchTripsArray);
+                });
+                    saveProgressText.Text = "Saving calendar.txt";
+                await Task.Run(() =>
+                {
+                    File.WriteAllLines(saveFolder.Path + "\\calendar.txt", batchCalendarArray);
+                 });
+                saveProgressText.Text = "Saving calendar_dates.txt";
+                await Task.Run(() =>
+                {
+                    File.WriteAllLines(saveFolder.Path + "\\calendar_dates.txt", batchCalendar_datesArray);
+                });
+                saveProgressText.Text = "Saving stops.txt";
+                // Remove any duplicate stops in the list
+                batchStopsArray = batchStopsArray.Distinct().ToList();
+                await Task.Run(() =>
+                {
+                    File.WriteAllLines(saveFolder.Path + "\\stops.txt", batchStopsArray);
+                });
+                saveProgressText.Text = "";
+                saveProgress.IsActive = false;
+            
             }
         }
 
-        private async void readAndParseXML(StorageFile file)
+            private async void pickFolderButton_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+
+            // select an xml file
+            FolderPicker folderPicker = new FolderPicker();
+            folderPicker.ViewMode = PickerViewMode.List;
+            folderPicker.FileTypeFilter.Add(".xml");
+            StorageFolder folder = await folderPicker.PickSingleFolderAsync();
+            if (folder != null)
+            {
+                // Reset any existing content
+                resetBatchArrayFunction();
+
+                // Application now has read/write access to all contents in the picked folder
+                // (including other sub-folder contents)
+                Windows.Storage.AccessCache.StorageApplicationPermissions.
+                FutureAccessList.AddOrReplace("PickedFolderToken", folder);
+                Debug.Write(folder.Name);
+                // Get the files in the current folder.
+                IReadOnlyList<StorageFile> filesInFolder = await folder.GetFilesAsync();
+               
+                // Set Minimum to 1 to represent the first file being copied.
+                progressBar.Minimum = 1;
+                // Set Maximum to the total number of files to copy.
+                progressBar.Maximum = filesInFolder.Count;
+                // Set the initial value of the ProgressBar.
+                progressBar.Value = 0;
+
+                saveContent.Visibility = Windows.UI.Xaml.Visibility.Collapsed;
+                completionText.Text = "";
+                progressIndicator.Visibility = Windows.UI.Xaml.Visibility.Visible;
+
+                // Iterate through each file in the folder
+                foreach (StorageFile f in filesInFolder)
+                {
+                    // Update the progress bar increment
+                    progressBar.Value = progressBar.Value + 1;
+                    // If the file type is xml
+                    if (f.FileType == ".xml")
+                    { 
+                        resetArrayFunction();
+                        clearUI();
+                        // Update progress text
+                        fileReading.Text = "Currently reading: " + f.Name;
+                        await readAndParseXML(f);
+                    }
+                }
+
+                // Hide progress bar and reset text content
+                progressIndicator.Visibility = Windows.UI.Xaml.Visibility.Collapsed;
+                fileReading.Text = "";
+                
+                // Display save button
+                saveContent.Visibility = Windows.UI.Xaml.Visibility.Visible;
+                completionText.Text = "Finished Processing";
+            }
+
+        }
+
+        private async Task readAndParseXML(StorageFile file)
         {
             Progress.IsActive = true;
             ProgressText.Text = "Loading XML.";
@@ -125,6 +238,18 @@ namespace TransXChange2GTFS
             tripsArray = new List<string>(new string[] { "route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id" });
             calendarArray = new List<string>(new string[] { "service_id, monday, tuesday, wednesday, thursday, friday, saturday, sunday, start_date, end_date" });
             calendar_datesArray = new List<string>(new string[] { "service_id, date, exception_type" });
+        }
+
+        private void resetBatchArrayFunction()
+        {
+            // Each of these lists will have lines added to it to become on of the files that will be outputted
+            batchStopsArray = new List<string>(new string[] { "stop_id,stop_code,stop_name,stop_lat,stop_lon,stop_url,vehicle_type" });
+            batchAgencyArray = new List<string>(new string[] { "agency_id,agency_name,agency_url,agency_timezone" });
+            batchRoutesArray = new List<string>(new string[] { "route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color" });
+            batchStop_timesArray = new List<string>(new string[] { "trip_id, arrival_time, departure_time, stop_id, stop_sequence, stop_headsign, pickup_type, drop_off_time, shape_dist_traveled" });
+            batchTripsArray = new List<string>(new string[] { "route_id, service_id, trip_id, trip_headsign, direction_id, block_id, shape_id" });
+            batchCalendarArray = new List<string>(new string[] { "service_id, monday, tuesday, wednesday, thursday, friday, saturday, sunday, start_date, end_date" });
+            batchCalendar_datesArray = new List<string>(new string[] { "service_id, date, exception_type" });
         }
 
         private JArray createPatternAndTimeArray(dynamic serviceObject, JObject journeyPatternsObject)
@@ -363,6 +488,7 @@ namespace TransXChange2GTFS
                 {
                     string stopInfo = busstopDictionary[stop];
                     stopsArray.Add(stopInfo);
+                    batchStopsArray.Add(stopInfo);
                 }
                 catch(KeyNotFoundException)
                 {
@@ -413,9 +539,12 @@ namespace TransXChange2GTFS
             for (int i = 0; i < operatorDetails.Count; i++)
             {
                 agencyArray.Add((operatorDetails[i]["@id"] + "," + operatorDetails[i]["OperatorShortName"] + ",,").ToString());
+                batchAgencyArray.Add((operatorDetails[i]["@id"] + "," + operatorDetails[i]["OperatorShortName"] + ",,").ToString());
+
             }
 
             routesArray.Add((serviceCode + "," + operatorID + "," + serviceName + "," + serviceDescription + ",,3,,,").ToString());
+            batchRoutesArray.Add((serviceCode + "," + operatorID + "," + serviceName + "," + serviceDescription + ",,3,,,").ToString());
 
             // UI change needs pushing back to the UI thread
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal,
@@ -626,7 +755,9 @@ namespace TransXChange2GTFS
             for (int i = 0; i < patternAndTimesArray.Count; i++)
             {
                 calendarArray.Add((patternAndTimesArray[i]["Calendar"] + serviceCode + "-" + (i + 1) + "," + string.Join(",", patternAndTimesArray[i]["Days"]) + "," + patternAndTimesArray[i]["StartingDate"] + "," + patternAndTimesArray[i]["EndDate"]).ToString());
+                batchCalendarArray.Add((patternAndTimesArray[i]["Calendar"] + serviceCode + "-" + (i + 1) + "," + string.Join(",", patternAndTimesArray[i]["Days"]) + "," + patternAndTimesArray[i]["StartingDate"] + "," + patternAndTimesArray[i]["EndDate"]).ToString());
                 tripsArray.Add((serviceCode + "," + patternAndTimesArray[i]["Calendar"] + serviceCode + "-" + (i + 1) + "," + serviceCode + "-" + (i + 1) + ",," + patternAndTimesArray[i]["Direction"] + ",,").ToString());
+                batchTripsArray.Add((serviceCode + "," + patternAndTimesArray[i]["Calendar"] + serviceCode + "-" + (i + 1) + "," + serviceCode + "-" + (i + 1) + ",," + patternAndTimesArray[i]["Direction"] + ",,").ToString());
 
                 // Add extra services to calendar_datesarray
                 if (patternAndTimesArray[i]["NoServiceDates"].Count() > 0)
@@ -635,6 +766,7 @@ namespace TransXChange2GTFS
                     for (int j = 0; j < patternAndTimesArray[i]["NoServiceDates"].Count(); j++)
                     {
                         calendar_datesArray.Add((patternAndTimesArray[i]["Calendar"] + serviceCode + "-" + (i + 1) + "," + patternAndTimesArray[i]["NoServiceDates"][j] + ",2").ToString());
+                        batchCalendar_datesArray.Add((patternAndTimesArray[i]["Calendar"] + serviceCode + "-" + (i + 1) + "," + patternAndTimesArray[i]["NoServiceDates"][j] + ",2").ToString());
                     }
                 }
 
@@ -644,13 +776,14 @@ namespace TransXChange2GTFS
                     for (int j = 0; j < patternAndTimesArray[i]["ExtraServiceDates"].Count(); j++)
                     {
                         calendar_datesArray.Add((patternAndTimesArray[i]["Calendar"] + serviceCode + "-" + (i + 1) + "," + patternAndTimesArray[i]["ExtraServiceDates"][j] + ",1").ToString());
+                        batchCalendar_datesArray.Add((patternAndTimesArray[i]["Calendar"] + serviceCode + "-" + (i + 1) + "," + patternAndTimesArray[i]["ExtraServiceDates"][j] + ",1").ToString());
                     }
                 }
-
 
                 for (int j = 0; j < patternAndTimesArray[i]["Stops"].Count(); j++)
                 {
                     stop_timesArray.Add((serviceCode + "-" + (i + 1) + "," + patternAndTimesArray[i]["Times"][j] + "," + patternAndTimesArray[i]["Times"][j] + "," + patternAndTimesArray[i]["Stops"][j] + "," + (j + 1) + ",,,,").ToString());
+                    batchStop_timesArray.Add((serviceCode + "-" + (i + 1) + "," + patternAndTimesArray[i]["Times"][j] + "," + patternAndTimesArray[i]["Times"][j] + "," + patternAndTimesArray[i]["Stops"][j] + "," + (j + 1) + ",,,,").ToString());
                 }
             }
 
@@ -678,6 +811,7 @@ namespace TransXChange2GTFS
             StopTimes.Text = "";
             CalendarDates.Text = "";
             Stops.Text = "";
+        
         }
 
         // Helper function to print lists of strings as newline-separated strings
