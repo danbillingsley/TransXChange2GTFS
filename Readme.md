@@ -1,4 +1,5 @@
-#TransXChange2GTFS
+# TransXChange2GTFS
+
 A .NET Core 2 script to convert UK public transport timetables from TransXChange format to GTFS format. You can find such files for all public transport modes in Great Britain (GB) except trains from [Traveline Open Data](http://www.travelinedata.org.uk/). Trains timetables are not publicly available in TransXChange format.
 
 This tool works for our purposes but it is not perfect. If you want GTFS files of GB public transport with quality and service level guarantees we recommend contacting [ITOWorld](http://www.itoworld.com/). Or finding us some money and we'll build that for you.
