@@ -6,9 +6,9 @@ This tool works for our purposes but it is not perfect. If you want GTFS files o
 
 ## Known limitations
 1. Routes with multiple operators may only show the first operator. We expect this to be fixed at some point.
-2. Dates of non-operation (Christmas Day etc...) are written to calendar_dates.txt. This file is much larger than necessary
-3. Other stuff may be wrong. Don't run your critical service on this tool.
-4. The trips and calendars issue below.
+2. Dates of non-operation (Christmas Day etc...) are written to calendar_dates.txt. This file is much larger than necessary (explained below).
+3. Currently, not every GB bank holiday is available as Dates of non-operation. We will add this in.
+4. Other stuff may be wrong. Don't run your critical service on this tool.
 
 ## Trips and calendars
 GTFS contains the concept of a trip (one journey of a bus, at a certain time, from the start of a route to the end of a route). GTFS also contains the concept of a calendar. A calendar describes which days those trips run on. Each trip runs to a calendar. *Currently we assign each trip a unique calendar even though many trips run to the same calendar*. This means that our calendar.txt and calendar_dates.txt file are much bigger than they need to be. To fix this we would need to look through the GTFS file before it is output and test for identical calendars, then merge them. **we haven't done this yet. We should. We haven't**.
