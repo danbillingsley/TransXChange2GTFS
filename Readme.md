@@ -7,11 +7,11 @@ This tool works for our purposes but it is not perfect. If you want GTFS files o
 ## Known limitations
 1. Routes with multiple operators may only show the first operator. We expect this to be fixed at some point.
 2. Dates of non-operation (Christmas Day etc...) are written to calendar_dates.txt. This file is much larger than necessary (explained below).
-3. Currently, not every GB bank holiday is available as Dates of non-operation. We will add this in.
+3. Not every GB bank holiday is included as a Date of non-operation. We intend to fix this.
 4. Other stuff may be wrong. Don't run your critical service on this tool.
 
 ## Trips and calendars
-GTFS contains the concept of a trip (one journey of a bus, at a certain time, from the start of a route to the end of a route). GTFS also contains the concept of a calendar. A calendar describes which days those trips run on. Each trip runs to a calendar. *Currently we assign each trip a unique calendar even though many trips run to the same calendar*. This means that our calendar.txt and calendar_dates.txt file are much bigger than they need to be. To fix this we would need to look through the GTFS file before it is output and test for identical calendars, then merge them. **we haven't done this yet. We should. We haven't**.
+GTFS contains the concept of a trip (one journey of a bus, at a certain time, from the start of a route to the end of a route). GTFS also contains the concept of a calendar. A calendar describes which days those trips run on. Each trip runs to a calendar. **Currently we assign each trip a unique calendar even though many trips run to the same calendar**. This means that our calendar.txt and calendar_dates.txt file are much bigger than they need to be. To fix this we would need to look through the GTFS file before it is output and test for identical calendars, then merge them. **we haven't done this yet. We should. We haven't**.
 
 ## Geography
 GTFS is designed for sharing the timetables of a transit authority or a single operator. In the UK, with dense public transport networks and huge number of operators this doesn't make a lot of sense. The tool can output a single collection of GTFS files (stops.txt, routes.txt, trips.txt, calendar.txt, agency.txt, calendar_dates.txt, stop_times.txt) from a single TransXChange file. Or it can output a single collection of GTFS files from thousands of TransXChange files stuck together. **For Great Britain a single GTFS file of every public transport journey would be enormous (100s of GB I'd guess), especially considering our trips and calendars issue**. For this reason we're probably going to be outputting GTFS files for the geographies used by Traveline.
@@ -26,3 +26,5 @@ A previous version of this parser was written for UWP (Universal Windows). This 
 
 ## License
 MIT license. Use it for whatever you like. Attribution to ODILeeds, Thomas Forth, and Daniel Billingsley. Copyright Thomas Forth and Daniel Billingsley.
+Example TransXChange files are from the Traveline National Dataset and are used under the [Open Government License v3](http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
+The Stops.txt is from NaPTAN and is used under the [Open Government License v3](http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
