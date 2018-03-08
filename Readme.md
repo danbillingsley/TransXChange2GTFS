@@ -24,6 +24,9 @@ You'll need some TransXChange files, get them from Traveline Open Data. TransXCh
 ## Previous Versions
 A previous version of this parser was written for UWP (Universal Windows). This has now been superceeded. It was really bad. Awful. Terrible. So bad. You really don't want to download that thing. But of course you can look at the history of this GitHub repo and find it if you really want. Seriously, don't.
 
+## Example
+An example of GTFS output from the tool is contained within yorkshireGTFS.zip. This contains schedules for all public transport routes in Yorkshire on 06/03/2018.
+
 ## License
 MIT license. Use it for whatever you like. Attribution to ODILeeds, Thomas Forth, and Daniel Billingsley. Copyright Thomas Forth and Daniel Billingsley.
 Example TransXChange files are from the Traveline National Dataset and are used under the [Open Government License v3](http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
