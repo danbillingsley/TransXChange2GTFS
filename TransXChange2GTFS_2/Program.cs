@@ -72,8 +72,14 @@ namespace TransXChange2GTFS_2
             agency.agency_name = operatorDetails.OperatorShortName;
             agency.agency_url = null;
             agency.agency_timezone = null;
-            AgencyList.Add(agency);
 
+            // Check whether this agency is contained within the list
+            var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.id);
+            if (agencyCheck == null)
+            {
+                AgencyList.Add(agency);
+            }
+            
             // Adding a new route
 
             // Calculate mode
