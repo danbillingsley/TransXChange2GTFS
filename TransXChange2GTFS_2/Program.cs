@@ -22,13 +22,16 @@ namespace TransXChange2GTFS_2
         static List<Trip> tripList = new List<Trip>();
         static List<StopTime> stopTimesList = new List<StopTime>();
         static List<NaptanStop> StopsList = new List<NaptanStop>();
+        static List<GTFSNaptanStop> GTFSStopsList = new List<GTFSNaptanStop>();
         static List<List<InternalRoute>> AllServicesInternalRoutes = new List<List<InternalRoute>>();
         static List<InternalRoute> InternalRoutesList = new List<InternalRoute>();
+        static List<String> routesFailingProcessing = new List<String>();
+        static List<String> routesSuccessProcessing = new List<String>();
         static BankHolidayDates bankHolidayDates = new BankHolidayDates();
 
         static void Main(string[] args)
         {
-            bankHolidayDates.AllBankHolidays = new List<string>(new string[] { "20180101", "20180330", "20180402", "20180507", "20180528", "20180827", "20181225", "20181226"});
+            bankHolidayDates.AllBankHolidays = new List<string>(new string[] { "20180101", "20180330", "20180402", "20180507", "20180528", "20180827", "20181225", "20181226" });
             bankHolidayDates.GoodFriday = "20180330";
             bankHolidayDates.LateSummerBankHolidayNotScotland = "20180827";
             bankHolidayDates.EasterMonday = "20180402";
@@ -37,11 +40,12 @@ namespace TransXChange2GTFS_2
             bankHolidayDates.ChristmasDay = "20181225";
             bankHolidayDates.BoxingDay = "20181226";
             bankHolidayDates.NewYearsDay = "20180101";
-    
+
             //Reading NAPTAN
-            TextReader textReader = File.OpenText("Stops.txt");
+            TextReader textReader = File.OpenText("NaptanStops.csv");
             CsvReader csvReader = new CsvReader(textReader);
-            csvReader.Configuration.Delimiter = "\t";
+            // csvReader.Configuration.Delimiter = "\t";
+            csvReader.Configuration.Delimiter = ",";
             NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
 
             foreach (string filePath in Directory.EnumerateFiles(@"exampleTransXChange", "*.xml"))
@@ -51,9 +55,11 @@ namespace TransXChange2GTFS_2
 
             processInternalRoutesList();
             writeGTFS();
+            writeReport();
         }
 
-        static void convertTransXChange2GTFS(string filePath) {
+        static void convertTransXChange2GTFS(string filePath)
+        {
             Console.WriteLine("Converting " + filePath);
             InternalRoutesList = new List<InternalRoute>();
             string XMLAsAString = File.ReadAllText(filePath, Encoding.UTF8);
@@ -61,52 +67,6 @@ namespace TransXChange2GTFS_2
             MemoryStream stream = new MemoryStream(byteArray);
             XmlSerializer serializer = new XmlSerializer(typeof(TransXChange));
             TransXChange _txObject = (TransXChange)serializer.Deserialize(stream);
-
-            // Creating agency object     
-            // Currently we assume that each route only has one operator
-            TransXChangeOperatorsOperator operatorDetails = _txObject.Operators.Operator;
-
-            // Adding a new agency  
-            Agency agency = new Agency();
-            agency.agency_id = operatorDetails.id;
-            agency.agency_name = operatorDetails.OperatorShortName;
-            agency.agency_url = null;
-            agency.agency_timezone = null;
-
-            // Check whether this agency is contained within the list
-            var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.id);
-            if (agencyCheck == null)
-            {
-                AgencyList.Add(agency);
-            }
-            
-            // Adding a new route
-
-            // Calculate mode
-            string mode = null;
-            if (_txObject.Services.Service.Mode == "bus")
-            {
-                mode = "3"; // there are more modes, but you need to look them up.
-            }
-
-            Route route = new Route();
-            route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
-            route.route_long_name = _txObject.Services.Service.Description;
-            route.route_id = _txObject.Services.Service.ServiceCode;
-            route.agency_id = operatorDetails.id;
-            route.route_color = null;
-            route.route_desc = null;
-            route.route_text_color = null;
-            route.route_url = null;
-            route.route_type = mode;
-            RoutesList.Add(route);
-
-            TransXChangeAnnotatedStopPointRef[] arrayOfStops = _txObject.StopPoints;
-            foreach (TransXChangeAnnotatedStopPointRef stop in arrayOfStops)
-            {
-                NaptanStop naptanStop = NaptanStops.Where(x => x.stop_id == stop.StopPointRef).FirstOrDefault(); //this lookup is really SLOW!! It takes up to 250ms?!
-                StopsList.Add(naptanStop);
-            }
 
             // Creating a journey patterns object
             TransXChangeJourneyPatternSection[] journeyPatternsArray = _txObject.JourneyPatternSections;
@@ -129,10 +89,11 @@ namespace TransXChange2GTFS_2
                 List<string> extraServiceDays = new List<string> { };
 
                 string journeyPatternRef = VehicleJourney.JourneyPatternRef;
-                TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekObject = VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek;
-
-                // Which days of the week does the service run on?
-                daysCheck = new List<int> {
+                try
+                {
+                    TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekObject = VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek;
+                    // Which days of the week does the service run on?
+                    daysCheck = new List<int> {
                     ObjectToInt(daysOfWeekObject.Monday),
                     ObjectToInt(daysOfWeekObject.Tuesday),
                     ObjectToInt(daysOfWeekObject.Wednesday),
@@ -142,174 +103,254 @@ namespace TransXChange2GTFS_2
                     ObjectToInt(daysOfWeekObject.Sunday),
                 };
 
-                // Which bank holidays does the service NOT run on?
-                if (VehicleJourney.OperatingProfile.BankHolidayOperation != null)
-                {
-                    TransXChangeVehicleJourneyOperatingProfileBankHolidayOperationDaysOfNonOperation bankHolidaysWithNoService = VehicleJourney.OperatingProfile.BankHolidayOperation.DaysOfNonOperation;
-                    if (bankHolidaysWithNoService != null)
+                    // Which bank holidays does the service NOT run on?
+                    if (VehicleJourney.OperatingProfile.BankHolidayOperation != null)
                     {
-                        if (bankHolidaysWithNoService.AllBankHolidays != null)
+                        TransXChangeVehicleJourneyOperatingProfileBankHolidayOperationDaysOfNonOperation bankHolidaysWithNoService = VehicleJourney.OperatingProfile.BankHolidayOperation.DaysOfNonOperation;
+                        if (bankHolidaysWithNoService != null)
                         {
-                            foreach (string bankholidayDate in bankHolidayDates.AllBankHolidays)
+                            if (bankHolidaysWithNoService.AllBankHolidays != null)
                             {
-                                noServiceDays.Add(bankholidayDate);
+                                foreach (string bankholidayDate in bankHolidayDates.AllBankHolidays)
+                                {
+                                    noServiceDays.Add(bankholidayDate);
+                                }
+                            }
+                            if (bankHolidaysWithNoService.NewYearsDay != null)
+                            {
+                                noServiceDays.Add(bankHolidayDates.NewYearsDay);
+                            }
+                            if (bankHolidaysWithNoService.GoodFriday != null)
+                            {
+                                noServiceDays.Add(bankHolidayDates.GoodFriday);
+                            }
+                            if (bankHolidaysWithNoService.EasterMonday != null)
+                            {
+                                noServiceDays.Add(bankHolidayDates.EasterMonday);
+                            }
+                            if (bankHolidaysWithNoService.MayDay != null)
+                            {
+                                noServiceDays.Add(bankHolidayDates.MayDay);
+                            }
+                            if (bankHolidaysWithNoService.SpringBank != null)
+                            {
+                                noServiceDays.Add(bankHolidayDates.SpringBank);
+                            }
+                            if (bankHolidaysWithNoService.LateSummerBankHolidayNotScotland != null)
+                            {
+                                noServiceDays.Add(bankHolidayDates.LateSummerBankHolidayNotScotland);
+                            }
+                            if (bankHolidaysWithNoService.ChristmasDay != null)
+                            {
+                                noServiceDays.Add(bankHolidayDates.ChristmasDay);
+                            }
+                            if (bankHolidaysWithNoService.BoxingDay != null)
+                            {
+                                noServiceDays.Add(bankHolidayDates.BoxingDay);
+                            }
+
+                        }
+                    }
+
+                    if (VehicleJourney.OperatingProfile.SpecialDaysOperation != null)
+                    {
+                        if (VehicleJourney.OperatingProfile.SpecialDaysOperation.DaysOfNonOperation != null)
+                        {
+                            TransXChangeVehicleJourneyOperatingProfileSpecialDaysOperationDateRange[] specialDaysOperation = VehicleJourney.OperatingProfile.SpecialDaysOperation.DaysOfNonOperation;
+                            foreach (TransXChangeVehicleJourneyOperatingProfileSpecialDaysOperationDateRange specialOperationPeriod in specialDaysOperation)
+                            {
+                                DateTime startDate = specialOperationPeriod.StartDate;
+                                DateTime endDate = specialOperationPeriod.EndDate;
+                                DateTime dateThreshold = new DateTime(2018, 12, 31);
+
+                                DateTime noServiceCurrentDay = startDate;
+                                while (DateTime.Compare(noServiceCurrentDay, endDate) <= 0 && DateTime.Compare(noServiceCurrentDay, dateThreshold) <= 0)
+                                {
+                                    // New date where the service doesn't run
+                                    string newNonServiceEntry = noServiceCurrentDay.ToString("yyyyMMdd");
+                                    noServiceDays.Add(newNonServiceEntry);
+
+                                    // Add 1 day
+                                    noServiceCurrentDay = noServiceCurrentDay.AddDays(1);
+                                }
                             }
                         }
-                        if (bankHolidaysWithNoService.NewYearsDay != null)
-                        {
-                            noServiceDays.Add(bankHolidayDates.NewYearsDay);
-                        }
-                        if (bankHolidaysWithNoService.GoodFriday != null)
-                        {
-                            noServiceDays.Add(bankHolidayDates.GoodFriday);
-                        }
-                        if (bankHolidaysWithNoService.EasterMonday != null)
-                        {
-                            noServiceDays.Add(bankHolidayDates.EasterMonday);
-                        }
-                        if (bankHolidaysWithNoService.MayDay != null)
-                        {
-                            noServiceDays.Add(bankHolidayDates.MayDay);
-                        }
-                        if (bankHolidaysWithNoService.SpringBank != null)
-                        {
-                            noServiceDays.Add(bankHolidayDates.SpringBank);
-                        }
-                        if (bankHolidaysWithNoService.LateSummerBankHolidayNotScotland != null)
-                        {
-                            noServiceDays.Add(bankHolidayDates.LateSummerBankHolidayNotScotland);
-                        }
-                        if (bankHolidaysWithNoService.ChristmasDay != null)
-                        {
-                            noServiceDays.Add(bankHolidayDates.ChristmasDay);
-                        }
-                        if (bankHolidaysWithNoService.BoxingDay != null)
-                        {
-                            noServiceDays.Add(bankHolidayDates.BoxingDay);
-                        }
-
                     }
-                }
 
-                if (VehicleJourney.OperatingProfile.SpecialDaysOperation != null)
-                {
-                    if (VehicleJourney.OperatingProfile.SpecialDaysOperation.DaysOfNonOperation != null)
+                    string calendarID = "cal_";
+                    string startingDate = _txObject.Services.Service.OperatingPeriod.StartDate.ToString("yyyyMMdd");
+                    string finishingDate = _txObject.Services.Service.OperatingPeriod.EndDate.ToString("yyyyMMdd");
+                    string direction;
+
+                    DateTime currentDepartureTime = VehicleJourney.DepartureTime;
+                    string currentDepartureTimeFormat = (currentDepartureTime.ToString("HH:mm"));
+
+                    string currentPattern = journeyPatternRef;
+
+                    direction = _txObject.Services.Service.StandardService.JourneyPattern.Where(x => x.id == currentPattern).FirstOrDefault().Direction;
+                    if (direction == "inbound")
                     {
-                        TransXChangeVehicleJourneyOperatingProfileSpecialDaysOperationDateRange[] specialDaysOperation = VehicleJourney.OperatingProfile.SpecialDaysOperation.DaysOfNonOperation;
-                        foreach (TransXChangeVehicleJourneyOperatingProfileSpecialDaysOperationDateRange specialOperationPeriod in specialDaysOperation)
-                        {
-                            DateTime startDate = specialOperationPeriod.StartDate;
-                            DateTime endDate = specialOperationPeriod.EndDate;
-                            DateTime dateThreshold = new DateTime(2018, 12, 31);
-
-                            DateTime noServiceCurrentDay = startDate;
-                            while (DateTime.Compare(noServiceCurrentDay, endDate) <= 0 && DateTime.Compare(noServiceCurrentDay, dateThreshold) <= 0)
-                            {
-                                // New date where the service doesn't run
-                                string newNonServiceEntry = noServiceCurrentDay.ToString("yyyyMMdd");
-                                noServiceDays.Add(newNonServiceEntry);
-
-                                // Add 1 day
-                                noServiceCurrentDay = noServiceCurrentDay.AddDays(1);
-                            }
-                        }
+                        direction = "1";
                     }
-                }
-
-                string calendarID = "cal_";
-                string startingDate = _txObject.Services.Service.OperatingPeriod.StartDate.ToString("yyyyMMdd");
-                string finishingDate = _txObject.Services.Service.OperatingPeriod.EndDate.ToString("yyyyMMdd");
-                string direction;
-
-                DateTime currentDepartureTime = VehicleJourney.DepartureTime;
-                string currentDepartureTimeFormat = (currentDepartureTime.ToString("HH:mm"));
-
-                string currentPattern = journeyPatternRef;
-
-                direction = _txObject.Services.Service.StandardService.JourneyPattern.Where(x => x.id == currentPattern).FirstOrDefault().Direction;
-                if (direction == "inbound")
-                {
-                    direction = "1";
-                }
-                else
-                {
-                    direction = "0";
-                }
-
-                // Create stop list and timing list for this vehicle journey
-                List<NaptanStop> currentStopList = new List<NaptanStop>();
-                List<DateTime> currentTimesList = new List<DateTime>();
-                String journeyPatternSectionRef = _txObject.Services.Service.StandardService.JourneyPattern.Where(x => x.id == currentPattern).FirstOrDefault().JourneyPatternSectionRefs;
-                // Timings
-                TransXChangeJourneyPatternSection CurrentJourneyPattern = journeyPatternsArray.Where(x => x.id == journeyPatternSectionRef).FirstOrDefault();
-
-                var TimingLinks = CurrentJourneyPattern.JourneyPatternTimingLink;
-                stopArray = new List<string>();
-                stopTimesArray = new List<string>();
-                timeGapArray = new List<string>();
-
-                for (int i = 0; i < TimingLinks.Length; i++)
-                {
-                    // Time between stops
-                    string timegap = TimingLinks[i].RunTime;
-                    timeGapArray.Add(timegap);
-
-                    string from = TimingLinks[i].From.StopPointRef;
-                    string to = TimingLinks[i].To.StopPointRef;
-
-                    stopArray.Add(from);
-
-                    // only add the "TO" stop for the last stop
-                    if (i == (TimingLinks.Length - 1))
-                    {
-                        stopArray.Add(to);
-                    }
-                }
-
-                // Go through stops
-                DateTime stopsTime = new DateTime();
-
-                for (int j = 0; j < stopArray.Count; j++)
-                {
-                    // First stop, just get the stop and departure time
-                    if (j == 0)
-                    {
-                        stopsTime = currentDepartureTime;
-                        stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
-                    }
-                    // For subsequent stops work out the time between stops
                     else
                     {
-                        // Remove the leading and trailing sections of the time leaving only the amount of seconds to add on.
-                        string timeGap = timeGapArray[j - 1].ToString();
-                        // I've added the "M" -- not sure if that's safe
-                        string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty).Replace("M", string.Empty);
-                        int timeIncrease = int.Parse(cleanedTimeGap);
-                        stopsTime = stopsTime.AddSeconds(timeIncrease);
-                        stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
+                        direction = "0";
+                    }
+
+                    // Create stop list and timing list for this vehicle journey
+                    List<NaptanStop> currentStopList = new List<NaptanStop>();
+                    List<DateTime> currentTimesList = new List<DateTime>();
+                    String journeyPatternSectionRef = _txObject.Services.Service.StandardService.JourneyPattern.Where(x => x.id == currentPattern).FirstOrDefault().JourneyPatternSectionRefs;
+                    // Timings
+                    TransXChangeJourneyPatternSection CurrentJourneyPattern = journeyPatternsArray.Where(x => x.id == journeyPatternSectionRef).FirstOrDefault();
+
+                    var TimingLinks = CurrentJourneyPattern.JourneyPatternTimingLink;
+                    stopArray = new List<string>();
+                    stopTimesArray = new List<string>();
+                    timeGapArray = new List<string>();
+
+                    for (int i = 0; i < TimingLinks.Length; i++)
+                    {
+                        // Time between stops
+                        string timegap = TimingLinks[i].RunTime;
+                        timeGapArray.Add(timegap);
+
+                        string from = TimingLinks[i].From.StopPointRef;
+                        string to = TimingLinks[i].To.StopPointRef;
+
+                        stopArray.Add(from);
+
+                        // only add the "TO" stop for the last stop
+                        if (i == (TimingLinks.Length - 1))
+                        {
+                            stopArray.Add(to);
+                        }
+                    }
+
+                    // Go through stops
+                    DateTime stopsTime = new DateTime();
+
+                    for (int j = 0; j < stopArray.Count; j++)
+                    {
+                        // First stop, just get the stop and departure time
+                        if (j == 0)
+                        {
+                            stopsTime = currentDepartureTime;
+                            stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
+                        }
+                        // For subsequent stops work out the time between stops
+                        else
+                        {
+                            // Remove the leading and trailing sections of the time leaving only the amount of seconds to add on.
+                            string timeGap = timeGapArray[j - 1].ToString();
+                            // I've added the "M" -- not sure if that's safe
+                            string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty).Replace("M", string.Empty);
+                            int timeIncrease = int.Parse(cleanedTimeGap);
+                            stopsTime = stopsTime.AddSeconds(timeIncrease);
+                            stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
+                        }
+                    }
+
+                    InternalRoute newRoute = new InternalRoute();
+                    newRoute.Service = _txObject.Services.Service.ServiceCode;
+                    newRoute.Departure = currentDepartureTime;
+                    newRoute.Pattern = journeyPatternRef;
+                    newRoute.Calendar = calendarID;
+                    newRoute.Days = daysCheck;
+                    newRoute.ExtraServiceDates = extraServiceDays;
+                    newRoute.NoServiceDates = noServiceDays;
+                    newRoute.StartingDate = startingDate;
+                    newRoute.EndDate = finishingDate;
+                    newRoute.Direction = direction;
+                    newRoute.Times = stopTimesArray;
+                    newRoute.Stops = stopArray;
+
+                    InternalRoutesList.Add(newRoute);
+                }
+                catch (Exception e)
+                {
+                    routesFailingProcessing.Add(_txObject.Services.Service.ServiceCode);
+                    Console.WriteLine("Route " + _txObject.Services.Service.ServiceCode + " conversion failed");
+                    break;
+                }
+            }
+
+            // There are valid routes for this service
+            if (InternalRoutesList.Count > 0)
+            {
+                routesSuccessProcessing.Add(_txObject.Services.Service.ServiceCode);
+                // Creating agency object     
+                // Currently we assume that each route only has one operator
+                TransXChangeOperatorsOperator operatorDetails = _txObject.Operators.Operator;
+
+                // Adding a new agency  
+                Agency agency = new Agency();
+                agency.agency_id = operatorDetails.id;
+                agency.agency_name = operatorDetails.OperatorShortName;
+                agency.agency_url = null;
+                agency.agency_timezone = null;
+
+                // Check whether this agency is contained within the list
+                var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.id);
+                if (agencyCheck == null)
+                {
+                    AgencyList.Add(agency);
+                }
+
+                // Adding a new route
+
+                // Calculate mode
+                string mode = null;
+                if (_txObject.Services.Service.Mode == "bus")
+                {
+                    mode = "3"; // there are more modes, but you need to look them up.
+                }
+
+                Route route = new Route();
+                route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
+                route.route_long_name = _txObject.Services.Service.Description;
+                route.route_id = _txObject.Services.Service.ServiceCode;
+                route.agency_id = operatorDetails.id;
+                route.route_color = null;
+                route.route_desc = null;
+                route.route_text_color = null;
+                route.route_url = null;
+                route.route_type = mode;
+                RoutesList.Add(route);
+
+                TransXChangeAnnotatedStopPointRef[] arrayOfStops = _txObject.StopPoints;
+                foreach (TransXChangeAnnotatedStopPointRef stop in arrayOfStops)
+                {
+                    NaptanStop naptanStop = NaptanStops.Where(x => x.ATCOCode == stop.StopPointRef).FirstOrDefault(); //this lookup is really SLOW!! It takes up to 250ms?!
+                    if (naptanStop == null)
+                    {
+                        Debug.WriteLine(stop.StopPointRef + " was not found in the NaptanStops.csv file");
+                    }
+                    else
+                    {
+                        // Check whether this stop is already contained within the list
+                        var stopCheck = StopsList.FirstOrDefault(x => x.ATCOCode == naptanStop.ATCOCode);
+                        if (stopCheck == null)
+                        {
+                            GTFSNaptanStop GTFSnaptanStop = new GTFSNaptanStop();
+                            GTFSnaptanStop.stop_id = naptanStop.ATCOCode;
+                            GTFSnaptanStop.stop_code = naptanStop.NaptanCode;
+                            GTFSnaptanStop.stop_name = naptanStop.CommonName;
+                            GTFSnaptanStop.stop_lat = naptanStop.Latitude;
+                            GTFSnaptanStop.stop_lon = naptanStop.Longitude;
+                            GTFSnaptanStop.stop_url = "NULL";
+                            GTFSnaptanStop.vehicle_type = "3";
+                            StopsList.Add(naptanStop);
+                            GTFSStopsList.Add(GTFSnaptanStop);
+                        }
                     }
                 }
 
-                InternalRoute newRoute = new InternalRoute();
-                newRoute.Service = _txObject.Services.Service.ServiceCode;
-                newRoute.Departure = currentDepartureTime;
-                newRoute.Pattern = journeyPatternRef;
-                newRoute.Calendar = calendarID;
-                newRoute.Days = daysCheck;
-                newRoute.ExtraServiceDates = extraServiceDays;
-                newRoute.NoServiceDates = noServiceDays;
-                newRoute.StartingDate = startingDate;
-                newRoute.EndDate = finishingDate;
-                newRoute.Direction = direction;
-                newRoute.Times = stopTimesArray;
-                newRoute.Stops = stopArray;
 
-                InternalRoutesList.Add(newRoute);
+                // create calendar.txt, calendar_dates.txt, trips.txt, stop_times.txt from InternalRoutesList
+                InternalRoutesList = InternalRoutesList.OrderBy(x => x.Departure).ToList();
+                AllServicesInternalRoutes.Add(InternalRoutesList);
             }
-
-            // create calendar.txt, calendar_dates.txt, trips.txt, stop_times.txt from InternalRoutesList
-            InternalRoutesList = InternalRoutesList.OrderBy(x => x.Departure).ToList();
-            AllServicesInternalRoutes.Add(InternalRoutesList);
         }
 
         static void processInternalRoutesList() {
@@ -321,7 +362,7 @@ namespace TransXChange2GTFS_2
 
                 foreach (InternalRoute InternalRoute in InternalRoutesList)
                 {
-                    
+
                     // Get list of trips
                     Trip newTrip = new Trip();
                     newTrip.route_id = InternalRoute.Service;
@@ -390,56 +431,67 @@ namespace TransXChange2GTFS_2
         }
 
         static void writeGTFS() {
-
-            string outputPath = "GTFS_output/";
-            System.IO.Directory.CreateDirectory(outputPath);
-
+            Console.WriteLine("Writing agency.csv");
             // write GTFS csvs.
             // agency.txt, calendar.txt, calendar_dates.txt, routes.txt, stop_times.txt, stops.txt, trips.txt
-            TextWriter agencyTextWriter = File.CreateText(outputPath + "agency.csv");
+            TextWriter agencyTextWriter = File.CreateText("agency.csv");
             CsvWriter agencyCSVwriter = new CsvWriter(agencyTextWriter);
             agencyCSVwriter.WriteRecords(AgencyList);
             agencyTextWriter.Dispose();
             agencyCSVwriter.Dispose();
 
-            TextWriter stopsTextWriter = File.CreateText(outputPath + "stops.csv");
+            Console.WriteLine("Writing stops.csv");
+            TextWriter stopsTextWriter = File.CreateText("stops.csv");
             CsvWriter stopsCSVwriter = new CsvWriter(stopsTextWriter);
-            stopsCSVwriter.WriteRecords(StopsList);
+            stopsCSVwriter.WriteRecords(GTFSStopsList);
             stopsTextWriter.Dispose();
             stopsCSVwriter.Dispose();
 
-            TextWriter routesTextWriter = File.CreateText(outputPath + "routes.csv");
+            Console.WriteLine("Writing routes.csv");
+            TextWriter routesTextWriter = File.CreateText("routes.csv");
             CsvWriter routesCSVwriter = new CsvWriter(routesTextWriter);
             routesCSVwriter.WriteRecords(RoutesList);
             routesTextWriter.Dispose();
             routesCSVwriter.Dispose();
 
-            TextWriter tripsTextWriter = File.CreateText(outputPath + "trips.csv");
+            Console.WriteLine("Writing trips.csv");
+            TextWriter tripsTextWriter = File.CreateText("trips.csv");
             CsvWriter tripsCSVwriter = new CsvWriter(tripsTextWriter);
             tripsCSVwriter.WriteRecords(tripList);
             tripsTextWriter.Dispose();
             tripsCSVwriter.Dispose();
 
-            TextWriter calendarTextWriter = File.CreateText(outputPath + "calendar.csv");
+            Console.WriteLine("Writing calendar.csv");
+            TextWriter calendarTextWriter = File.CreateText("calendar.csv");
             CsvWriter calendarCSVwriter = new CsvWriter(calendarTextWriter);
             calendarCSVwriter.WriteRecords(calendarList);
             calendarTextWriter.Dispose();
             calendarCSVwriter.Dispose();
 
-            TextWriter stopTimeTextWriter = File.CreateText(outputPath + "stop_times.csv");
+            Console.WriteLine("Writing stop_times.csv");
+            TextWriter stopTimeTextWriter = File.CreateText("stop_times.csv");
             CsvWriter stopTimeCSVwriter = new CsvWriter(stopTimeTextWriter);
             stopTimeCSVwriter.WriteRecords(stopTimesList);
             stopTimeTextWriter.Dispose();
             stopTimeCSVwriter.Dispose();
 
-            TextWriter calendarDatesTextWriter = File.CreateText(outputPath + "calendar_dates.csv");
+            Console.WriteLine("Writing calendar_dates.csv");
+            TextWriter calendarDatesTextWriter = File.CreateText("calendar_dates.csv");
             CsvWriter calendarDatesCSVwriter = new CsvWriter(calendarDatesTextWriter);
             calendarDatesCSVwriter.WriteRecords(calendarExceptionsList);
             calendarDatesTextWriter.Dispose();
             calendarDatesCSVwriter.Dispose();
             Console.WriteLine("stop");
         }
-        
+
+        // Creates a text file showing a summary of results
+        static void writeReport()
+        {
+            int totalRoutesProcessed = routesSuccessProcessing.Count() + routesFailingProcessing.Count();
+            string text = "Total routes processed: " + totalRoutesProcessed + "\r\nRoutes processed successfully: " + routesSuccessProcessing.Count() + "\r\nRoutes failing processing: " + routesFailingProcessing.Count() + "\r\nFailed routes:\r\n" + String.Join("\r\n", routesFailingProcessing.ToArray());
+            System.IO.File.WriteAllText(@"processReport.txt", text);
+        }
+
         static int ObjectToInt(object input)
         {
             if (input != null)
@@ -474,7 +526,7 @@ namespace TransXChange2GTFS_2
     {
         public List<string> AllBankHolidays { get; set; }
         public string GoodFriday { get; set; }
-        public string LateSummerBankHolidayNotScotland { get; set; }     
+        public string LateSummerBankHolidayNotScotland { get; set; }
         public string EasterMonday { get; set; }
         public string MayDay { get; set; }
         public string SpringBank { get; set; }
@@ -532,8 +584,8 @@ namespace TransXChange2GTFS_2
         public string shape_dist_traveled { get; set; }
     }
 
-    // A LIST OF THESE NAPTANSTOPS CREATES THE GTFS stops.txt file
-    public class NaptanStop
+    //A LIST OF THESE NAPTANSTOPS CREATES THE GTFS stops.txt file
+    public class GTFSNaptanStop
     {
         public string stop_id { get; set; }
         public string stop_code { get; set; }
@@ -544,8 +596,17 @@ namespace TransXChange2GTFS_2
         public string vehicle_type { get; set; }
     }
 
-    // A LIST OF THESE ROUTES CREATES THE GTFS routes.txt file.
-    public class Route
+    public class NaptanStop
+    {
+        public string ATCOCode { get; set; }
+        public string NaptanCode { get; set; }
+        public string CommonName { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
+// A LIST OF THESE ROUTES CREATES THE GTFS routes.txt file.
+public class Route
     {
         public string route_id { get; set; }
         public string agency_id { get; set; }
