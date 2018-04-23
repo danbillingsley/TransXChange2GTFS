@@ -44,7 +44,6 @@ namespace TransXChange2GTFS_2
             //Reading NAPTAN
             TextReader textReader = File.OpenText("NaptanStops.csv");
             CsvReader csvReader = new CsvReader(textReader);
-            // csvReader.Configuration.Delimiter = "\t";
             csvReader.Configuration.Delimiter = ",";
             NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
 
@@ -298,7 +297,6 @@ namespace TransXChange2GTFS_2
                 }
 
                 // Adding a new route
-
                 // Calculate mode
                 string mode = null;
                 if (_txObject.Services.Service.Mode == "bus")
@@ -489,7 +487,7 @@ namespace TransXChange2GTFS_2
         {
             int totalRoutesProcessed = routesSuccessProcessing.Count() + routesFailingProcessing.Count();
             string text = "Total routes processed: " + totalRoutesProcessed + "\r\nRoutes processed successfully: " + routesSuccessProcessing.Count() + "\r\nRoutes failing processing: " + routesFailingProcessing.Count() + "\r\nFailed routes:\r\n" + String.Join("\r\n", routesFailingProcessing.ToArray());
-            System.IO.File.WriteAllText(@"processReport.txt", text);
+            System.IO.File.WriteAllText(@"report.txt", text);
         }
 
         static int ObjectToInt(object input)
