@@ -17,10 +17,15 @@ GTFS contains the concept of a trip (one journey of a bus, at a certain time, fr
 ## Geography
 GTFS is designed for sharing the timetables of a transit authority or a single operator. In the UK, with dense public transport networks and huge number of operators this doesn't make a lot of sense. The tool can output a single collection of GTFS files (stops.txt, routes.txt, trips.txt, calendar.txt, agency.txt, calendar_dates.txt, stop_times.txt) from a single TransXChange file. Or it can output a single collection of GTFS files from thousands of TransXChange files stuck together. **For Great Britain a single GTFS file of every public transport journey would be enormous (100s of GB I'd guess), especially considering our trips and calendars issue**. For this reason we're probably going to be outputting GTFS files for the geographies used by Traveline.
 
+## NaPTAN
+National Public Transport Access Nodes (NaPTAN) is the national system for uniquely identifying points of access to public transport in England, Scotland and Wales. We have included a compressed extract of the complete NaPTAN stops dataset (from 20/04/2018) in this project. This must be unzipped before running the code. This dataset is updated daily and up-to-date data can be obtained [here](http://naptan.app.dft.gov.uk/datarequest/help). 
+
 ## Running the code
 You'll need some TransXChange files, get them from Traveline Open Data. TransXChange format files can change with time, this parser works with most files we tested it with in February 2018. I can't guarantee it'll work into the future.
 
 .NET Core 2 code can run on just about any computer. Linux, Mac, Windows on Arm and Intel and AMD processors. Microsoft will have a good guide to doing that. We include the Visual Studio Solution to help you. We did this work on Windows, but it may work with the Mac version.
+
+Upon completion a text file "report.txt" is generated. This contains a summary of results and a list of services that failed processing.
 
 ## Previous Versions
 A previous version of this parser was written for UWP (Universal Windows). This has now been superceeded. It was really bad. Awful. Terrible. So bad. You really don't want to download that thing. But of course you can look at the history of this GitHub repo and find it if you really want. Seriously, don't.
