@@ -86,7 +86,7 @@ namespace TransXChange2GTFS_2
             {
                 List<string> noServiceDays = new List<string> { };
                 List<string> extraServiceDays = new List<string> { };
-                if(VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek == null) //Edit to ignore blank results
+                if(VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek == null) // skip invalid
                     continue;
                 string journeyPatternRef = VehicleJourney.JourneyPatternRef;
                 try
@@ -101,9 +101,7 @@ namespace TransXChange2GTFS_2
                     ObjectToInt(daysOfWeekObject.Friday),
                     ObjectToInt(daysOfWeekObject.Saturday),
                     ObjectToInt(daysOfWeekObject.Sunday),
-                    //ObjectToInt(daysOfWeekObject.HolidaysOnly),   //Edit
                 };
-                
 
                     // Which bank holidays does the service NOT run on?
                     if (VehicleJourney.OperatingProfile.BankHolidayOperation != null)
@@ -298,8 +296,8 @@ namespace TransXChange2GTFS_2
                 Agency agency = new Agency();
                 agency.agency_id = operatorDetails.id;
                 agency.agency_name = operatorDetails.OperatorShortName;
-                agency.agency_url = "https://www.google.com/search?q="+operatorDetails.OperatorShortName; //Edit to have google plus name of agency
-                agency.agency_timezone = "Europe/London"; //Edit set to Europe/London
+                agency.agency_url = "https://www.google.com/search?q="+operatorDetails.OperatorShortName; // google plus name of agency by default
+                agency.agency_timezone = "Europe/London"; // Europe/London by default
 
                 // Check whether this agency is contained within the list
                 var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.id);
@@ -396,7 +394,6 @@ namespace TransXChange2GTFS_2
                     newCalendar.sunday = InternalRoute.Days[6];
                     newCalendar.start_date = InternalRoute.StartingDate;
                     newCalendar.end_date = InternalRoute.EndDate;
-                    
                     calendarList.Add(newCalendar);
 
                     // List of stop times
@@ -442,7 +439,7 @@ namespace TransXChange2GTFS_2
         }
 
         static void writeGTFS() {
-            Console.WriteLine("Writing agency.txt"); //Edit changed to txt not csv
+            Console.WriteLine("Writing agency.txt");
             // write GTFS txts.
             // agency.txt, calendar.txt, calendar_dates.txt, routes.txt, stop_times.txt, stops.txt, trips.txt
             TextWriter agencyTextWriter = File.CreateText(@"output/agency.txt");
@@ -1863,7 +1860,6 @@ public class Route
                 this.startDateField = value;
             }
         }
-    
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(DataType = "date")]
         public System.DateTime EndDate
@@ -1979,22 +1975,20 @@ public class Route
     public partial class TransXChangeServicesServiceOperatingProfileRegularDayTypeDaysOfWeek
     {
 
-        private object mondaytosaturdayField;
+        private object mondayToSundayField;
 
-                /// <remarks/>
-        public object MondayToSaturday
+        /// <remarks/>
+        public object MondayToSunday
         {
             get
             {
-                return this.mondaytosaturdayField;
+                return this.mondayToSundayField;
             }
             set
             {
-                this.mondaytosaturdayField = value;
+                this.mondayToSundayField = value;
             }
         }
-
-
     }
 
     /// <remarks/>
@@ -2035,7 +2029,6 @@ public class Route
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(DataType = "date")]
         public System.DateTime StartDate
-
         {
             get
             {
@@ -2656,13 +2649,11 @@ public class Route
         }
     }
 
-
     /// <remarks/>
     [System.SerializableAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
     [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://www.transxchange.org.uk/")]
     public partial class TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek
-        
     {
 
         private object mondayField;
@@ -2786,79 +2777,6 @@ public class Route
             }
         }
 
-        /// <remarks/>
-        public object MondayToFriday
-        {
-            get
-            {
-                return this.mondayField;
-                return this.tuesdayField;
-                return this.wednesdayField;
-                return this.thursdayField;
-                return this.fridayField;
-            }
-            set
-            {
-                this.mondayField = value;
-                this.tuesdayField = value;
-                this.wednesdayField = value;
-                this.thursdayField = value;
-                this.fridayField = value;
-            }
-            
-        }
-
-        /// <remarks/>
-        public object MondayToSaturday
-        {
-            get
-            {
-                return this.mondayField;
-                return this.tuesdayField;
-                return this.wednesdayField;
-                return this.thursdayField;
-                return this.fridayField;
-                return this.saturdayField;
-            }
-            set
-            {
-                this.mondayField = value;
-                this.tuesdayField = value;
-                this.wednesdayField = value;
-                this.thursdayField = value;
-                this.fridayField = value;
-                this.saturdayField = value;
-            }
-        }
-        /// <remarks/>
-        public object MondayToSunday
-        {
-            get
-            {
-                return this.mondayField;
-                return this.tuesdayField;
-                return this.wednesdayField;
-                return this.thursdayField;
-                return this.fridayField;
-                return this.saturdayField;
-                return this.sundayField;
-            }
-            set
-            {
-                this.mondayField = value;
-                this.tuesdayField = value;
-                this.wednesdayField = value;
-                this.thursdayField = value;
-                this.fridayField = value;
-                this.saturdayField = value;
-                this.sundayField = value;
-            }
-            
-        }
-    }
-
-    // Edit: Had to include MondayToFriday and MondayToSaturday fields for Wales data
- 
     /// <remarks/>
     [System.SerializableAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
