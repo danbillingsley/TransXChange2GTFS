@@ -47,7 +47,7 @@ namespace TransXChange2GTFS_2
             csvReader.Configuration.Delimiter = ",";
             NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
 
-            foreach (string filePath in Directory.EnumerateFiles(@"exampleTransXChange", "*.xml"))
+            foreach (string filePath in Directory.EnumerateFiles(@"input", "*.xml"))
             {
                 convertTransXChange2GTFS(filePath);
             }
@@ -86,7 +86,8 @@ namespace TransXChange2GTFS_2
             {
                 List<string> noServiceDays = new List<string> { };
                 List<string> extraServiceDays = new List<string> { };
-
+                if(VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek == null) //Edit to ignore blank results
+                    continue;
                 string journeyPatternRef = VehicleJourney.JourneyPatternRef;
                 try
                 {
@@ -100,7 +101,9 @@ namespace TransXChange2GTFS_2
                     ObjectToInt(daysOfWeekObject.Friday),
                     ObjectToInt(daysOfWeekObject.Saturday),
                     ObjectToInt(daysOfWeekObject.Sunday),
+                    //ObjectToInt(daysOfWeekObject.HolidaysOnly),   //Edit
                 };
+                
 
                     // Which bank holidays does the service NOT run on?
                     if (VehicleJourney.OperatingProfile.BankHolidayOperation != null)
@@ -242,10 +245,19 @@ namespace TransXChange2GTFS_2
                         {
                             // Remove the leading and trailing sections of the time leaving only the amount of seconds to add on.
                             string timeGap = timeGapArray[j - 1].ToString();
-                            // I've added the "M" -- not sure if that's safe
-                            string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty).Replace("M", string.Empty);
-                            int timeIncrease = int.Parse(cleanedTimeGap);
-                            stopsTime = stopsTime.AddSeconds(timeIncrease);
+                            // I've added the "M" -- not sure if that's safe (MH Edit: some .xml files contain M instead of S, need to check first)
+                            if (timeGap.EndsWith("S")== true)
+                            {
+                                string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty);
+                                int timeIncrease = int.Parse(cleanedTimeGap);
+                                stopsTime = stopsTime.AddSeconds(timeIncrease);
+                            }
+                            else
+                            {
+                                 string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("M", string.Empty);
+                                 int timeIncrease = int.Parse(cleanedTimeGap);
+                                 stopsTime = stopsTime.AddMinutes(timeIncrease);
+                            }
                             stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
                         }
                     }
@@ -286,8 +298,8 @@ namespace TransXChange2GTFS_2
                 Agency agency = new Agency();
                 agency.agency_id = operatorDetails.id;
                 agency.agency_name = operatorDetails.OperatorShortName;
-                agency.agency_url = null;
-                agency.agency_timezone = null;
+                agency.agency_url = "https://www.google.com/search?q="+operatorDetails.OperatorShortName; //Edit to have google plus name of agency
+                agency.agency_timezone = "Europe/London"; //Edit set to Europe/London
 
                 // Check whether this agency is contained within the list
                 var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.id);
@@ -384,6 +396,7 @@ namespace TransXChange2GTFS_2
                     newCalendar.sunday = InternalRoute.Days[6];
                     newCalendar.start_date = InternalRoute.StartingDate;
                     newCalendar.end_date = InternalRoute.EndDate;
+                    
                     calendarList.Add(newCalendar);
 
                     // List of stop times
@@ -429,52 +442,52 @@ namespace TransXChange2GTFS_2
         }
 
         static void writeGTFS() {
-            Console.WriteLine("Writing agency.csv");
-            // write GTFS csvs.
+            Console.WriteLine("Writing agency.txt"); //Edit changed to txt not csv
+            // write GTFS txts.
             // agency.txt, calendar.txt, calendar_dates.txt, routes.txt, stop_times.txt, stops.txt, trips.txt
-            TextWriter agencyTextWriter = File.CreateText("agency.csv");
+            TextWriter agencyTextWriter = File.CreateText(@"output/agency.txt");
             CsvWriter agencyCSVwriter = new CsvWriter(agencyTextWriter);
             agencyCSVwriter.WriteRecords(AgencyList);
             agencyTextWriter.Dispose();
             agencyCSVwriter.Dispose();
 
-            Console.WriteLine("Writing stops.csv");
-            TextWriter stopsTextWriter = File.CreateText("stops.csv");
+            Console.WriteLine("Writing stops.txt");
+            TextWriter stopsTextWriter = File.CreateText(@"output/stops.txt");
             CsvWriter stopsCSVwriter = new CsvWriter(stopsTextWriter);
             stopsCSVwriter.WriteRecords(GTFSStopsList);
             stopsTextWriter.Dispose();
             stopsCSVwriter.Dispose();
 
-            Console.WriteLine("Writing routes.csv");
-            TextWriter routesTextWriter = File.CreateText("routes.csv");
+            Console.WriteLine("Writing routes.txt");
+            TextWriter routesTextWriter = File.CreateText(@"output/routes.txt");
             CsvWriter routesCSVwriter = new CsvWriter(routesTextWriter);
             routesCSVwriter.WriteRecords(RoutesList);
             routesTextWriter.Dispose();
             routesCSVwriter.Dispose();
 
-            Console.WriteLine("Writing trips.csv");
-            TextWriter tripsTextWriter = File.CreateText("trips.csv");
+            Console.WriteLine("Writing trips.txt");
+            TextWriter tripsTextWriter = File.CreateText(@"output/trips.txt");
             CsvWriter tripsCSVwriter = new CsvWriter(tripsTextWriter);
             tripsCSVwriter.WriteRecords(tripList);
             tripsTextWriter.Dispose();
             tripsCSVwriter.Dispose();
 
-            Console.WriteLine("Writing calendar.csv");
-            TextWriter calendarTextWriter = File.CreateText("calendar.csv");
+            Console.WriteLine("Writing calendar.txt");
+            TextWriter calendarTextWriter = File.CreateText(@"output/calendar.txt");
             CsvWriter calendarCSVwriter = new CsvWriter(calendarTextWriter);
             calendarCSVwriter.WriteRecords(calendarList);
             calendarTextWriter.Dispose();
             calendarCSVwriter.Dispose();
 
-            Console.WriteLine("Writing stop_times.csv");
-            TextWriter stopTimeTextWriter = File.CreateText("stop_times.csv");
+            Console.WriteLine("Writing stop_times.txt");
+            TextWriter stopTimeTextWriter = File.CreateText(@"output/stop_times.txt");
             CsvWriter stopTimeCSVwriter = new CsvWriter(stopTimeTextWriter);
             stopTimeCSVwriter.WriteRecords(stopTimesList);
             stopTimeTextWriter.Dispose();
             stopTimeCSVwriter.Dispose();
 
-            Console.WriteLine("Writing calendar_dates.csv");
-            TextWriter calendarDatesTextWriter = File.CreateText("calendar_dates.csv");
+            Console.WriteLine("Writing calendar_dates.txt");
+            TextWriter calendarDatesTextWriter = File.CreateText(@"output/calendar_dates.txt");
             CsvWriter calendarDatesCSVwriter = new CsvWriter(calendarDatesTextWriter);
             calendarDatesCSVwriter.WriteRecords(calendarExceptionsList);
             calendarDatesTextWriter.Dispose();
@@ -487,7 +500,7 @@ namespace TransXChange2GTFS_2
         {
             int totalRoutesProcessed = routesSuccessProcessing.Count() + routesFailingProcessing.Count();
             string text = "Total routes processed: " + totalRoutesProcessed + "\r\nRoutes processed successfully: " + routesSuccessProcessing.Count() + "\r\nRoutes failing processing: " + routesFailingProcessing.Count() + "\r\nFailed routes:\r\n" + String.Join("\r\n", routesFailingProcessing.ToArray());
-            System.IO.File.WriteAllText(@"report.txt", text);
+            System.IO.File.WriteAllText(@"output/report.txt", text);
         }
 
         static int ObjectToInt(object input)
@@ -1850,18 +1863,35 @@ public class Route
                 this.startDateField = value;
             }
         }
-
+    
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(DataType = "date")]
         public System.DateTime EndDate
         {
             get
+            // {   if (EndDate != null)
+            //     {
+            //         return this.endDateField;
+            //     }
+            //     else
+            //     {
+            //         this.endDateField = new DateTime(2999, 8, 1);
+            //      }
+            // }
             {
                 return this.endDateField;
             }
             set
-            {
-                this.endDateField = value;
+            {  
+                if (EndDate != null)
+                {
+                    this.endDateField = value;
+                }
+                else
+                {
+                    DateTime default_date = new DateTime(2019, 8, 18);
+                    this.endDateField = default_date;
+                }
             }
         }
     }
@@ -1949,20 +1979,22 @@ public class Route
     public partial class TransXChangeServicesServiceOperatingProfileRegularDayTypeDaysOfWeek
     {
 
-        private object mondayToSundayField;
+        private object mondaytosaturdayField;
 
-        /// <remarks/>
-        public object MondayToSunday
+                /// <remarks/>
+        public object MondayToSaturday
         {
             get
             {
-                return this.mondayToSundayField;
+                return this.mondaytosaturdayField;
             }
             set
             {
-                this.mondayToSundayField = value;
+                this.mondaytosaturdayField = value;
             }
         }
+
+
     }
 
     /// <remarks/>
@@ -2003,6 +2035,7 @@ public class Route
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(DataType = "date")]
         public System.DateTime StartDate
+
         {
             get
             {
@@ -2623,11 +2656,13 @@ public class Route
         }
     }
 
+
     /// <remarks/>
     [System.SerializableAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
     [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://www.transxchange.org.uk/")]
     public partial class TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek
+        
     {
 
         private object mondayField;
@@ -2643,6 +2678,22 @@ public class Route
         private object saturdayField;
 
         private object fridayField;
+
+        //EDIT
+        private object holidaysonlyField; //Edit
+
+        /// <remarks/>
+        public object HolidaysOnly
+        {
+            get
+            {
+                return this.holidaysonlyField;
+            }
+            set
+            {
+                this.holidaysonlyField = value;
+            }
+        }
 
         /// <remarks/>
         public object Monday
@@ -2734,8 +2785,80 @@ public class Route
                 this.fridayField = value;
             }
         }
+
+        /// <remarks/>
+        public object MondayToFriday
+        {
+            get
+            {
+                return this.mondayField;
+                return this.tuesdayField;
+                return this.wednesdayField;
+                return this.thursdayField;
+                return this.fridayField;
+            }
+            set
+            {
+                this.mondayField = value;
+                this.tuesdayField = value;
+                this.wednesdayField = value;
+                this.thursdayField = value;
+                this.fridayField = value;
+            }
+            
+        }
+
+        /// <remarks/>
+        public object MondayToSaturday
+        {
+            get
+            {
+                return this.mondayField;
+                return this.tuesdayField;
+                return this.wednesdayField;
+                return this.thursdayField;
+                return this.fridayField;
+                return this.saturdayField;
+            }
+            set
+            {
+                this.mondayField = value;
+                this.tuesdayField = value;
+                this.wednesdayField = value;
+                this.thursdayField = value;
+                this.fridayField = value;
+                this.saturdayField = value;
+            }
+        }
+        /// <remarks/>
+        public object MondayToSunday
+        {
+            get
+            {
+                return this.mondayField;
+                return this.tuesdayField;
+                return this.wednesdayField;
+                return this.thursdayField;
+                return this.fridayField;
+                return this.saturdayField;
+                return this.sundayField;
+            }
+            set
+            {
+                this.mondayField = value;
+                this.tuesdayField = value;
+                this.wednesdayField = value;
+                this.thursdayField = value;
+                this.fridayField = value;
+                this.saturdayField = value;
+                this.sundayField = value;
+            }
+            
+        }
     }
 
+    // Edit: Had to include MondayToFriday and MondayToSaturday fields for Wales data
+ 
     /// <remarks/>
     [System.SerializableAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]
