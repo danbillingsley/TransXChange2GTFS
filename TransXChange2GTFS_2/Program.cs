@@ -346,7 +346,7 @@ namespace TransXChange2GTFS_2
                             GTFSnaptanStop.stop_name = naptanStop.CommonName;
                             GTFSnaptanStop.stop_lat = naptanStop.Latitude;
                             GTFSnaptanStop.stop_lon = naptanStop.Longitude;
-                            GTFSnaptanStop.stop_url = "NULL";
+                            GTFSnaptanStop.stop_url = "";
                             GTFSnaptanStop.vehicle_type = "3";
                             StopsList.Add(naptanStop);
                             GTFSStopsList.Add(GTFSnaptanStop);
