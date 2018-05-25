@@ -1,4 +1,0 @@
-Total routes processed: 3
-Routes processed successfully: 3
-Routes failing processing: 0
-Failed routes:
