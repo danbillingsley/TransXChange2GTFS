@@ -347,7 +347,10 @@ namespace TransXChange2GTFS_2
                             GTFSnaptanStop.stop_lat = naptanStop.Latitude;
                             GTFSnaptanStop.stop_lon = naptanStop.Longitude;
                             GTFSnaptanStop.stop_url = "";
-                            GTFSnaptanStop.vehicle_type = "3";
+                            // need to extract this from naptan data.
+			    // 300 = bus
+			    // https://developers.google.com/transit/gtfs/reference/extended-route-types
+                            //GTFSnaptanStop.vehicle_type = "3";
                             StopsList.Add(naptanStop);
                             GTFSStopsList.Add(GTFSnaptanStop);
                         }
@@ -601,7 +604,7 @@ namespace TransXChange2GTFS_2
         public double stop_lat { get; set; }
         public double stop_lon { get; set; }
         public string stop_url { get; set; }
-        public string vehicle_type { get; set; }
+        //public string vehicle_type { get; set; }
     }
 
     public class NaptanStop
