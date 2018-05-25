@@ -2776,7 +2776,8 @@ public class Route
                 this.fridayField = value;
             }
         }
-
+    }
+	
     /// <remarks/>
     [System.SerializableAttribute()]
     [System.ComponentModel.DesignerCategoryAttribute("code")]

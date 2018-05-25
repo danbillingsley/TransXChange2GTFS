@@ -90,6 +90,7 @@ stop_id,stop_code,stop_name,stop_lat,stop_lon,stop_url,vehicle_type
 5710AWA10723,cdidjg,Royal Hotel KJ,51.4784038545,-3.1788446973,NULL,3
 5710WDB47952,cditjdj,Canal Street,51.477576121,-3.175309809,NULL,3
 5710CAA02625,cditdwm,M&S Ty Glas Avenue,51.5269290109,-3.1917021666,NULL,3
+5710AWA11108,cdimwpm,Queen Street Station Stop HF,51.4814539464,-3.170585188,NULL,3
 5710AWA10944,cdijmda,Coed Glas Sch,51.5273123063,-3.1840431467,NULL,3
 5710AWA10942,cdijmjg,Leisure Centre,51.526868219,-3.1906050137,NULL,3
 5710AWA10941,cdijpaj,Ty Glas Avenue,51.5264356148,-3.1915883755,NULL,3
@@ -106,4 +107,3 @@ stop_id,stop_code,stop_name,stop_lat,stop_lon,stop_url,vehicle_type
 5710AWA10950,cdiadgp,Fishguard Rd,51.5238429138,-3.187455827,NULL,3
 5710CBZ02528,cdijmdp,Crundale Crescent West,51.5260727453,-3.1874706028,NULL,3
 5710WDB25186,cditamt,M&S Ty Glas Avenue,51.5267999877,-3.1928952681,NULL,3
-5710AWA11108,cdimwpm,Queen Street Station Stop HF,51.4814539464,-3.170585188,NULL,3

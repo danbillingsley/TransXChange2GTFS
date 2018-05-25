@@ -1,4 +1,4 @@
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
 CBAO028,O1,28,"Cardiff City Centre - Thornhill via Fidlas Rd, Fishguard Rd",,3,,,
-CBAO028A,O1,28A,"Cardiff City Centre - Thornhill via Fidlas Rd, Fishguard Rd",,3,,,
 CBAO028B,O1,28B,"Cardiff City Centre - Cardiff City Centre Circular via Fidlas Rd, Thornhill, Fidlas Rd",,3,,,
+CBAO028A,O1,28A,"Cardiff City Centre - Thornhill via Fidlas Rd, Fishguard Rd",,3,,,
