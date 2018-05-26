@@ -86,22 +86,32 @@ namespace TransXChange2GTFS_2
             {
                 List<string> noServiceDays = new List<string> { };
                 List<string> extraServiceDays = new List<string> { };
+
                 if(VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek == null) // skip invalid
                     continue;
+
                 string journeyPatternRef = VehicleJourney.JourneyPatternRef;
                 try
                 {
                     TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekObject = VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek;
                     // Which days of the week does the service run on?
-                    daysCheck = new List<int> {
-                    ObjectToInt(daysOfWeekObject.Monday),
-                    ObjectToInt(daysOfWeekObject.Tuesday),
-                    ObjectToInt(daysOfWeekObject.Wednesday),
-                    ObjectToInt(daysOfWeekObject.Thursday),
-                    ObjectToInt(daysOfWeekObject.Friday),
-                    ObjectToInt(daysOfWeekObject.Saturday),
-                    ObjectToInt(daysOfWeekObject.Sunday),
-                };
+		    if(daysOfWeekObject.MondayToFriday != null) {
+			daysCheck = new List<int> { 1, 1, 1, 1, 1, 0, 0 };
+                    } else if(daysOfWeekObject.MondayToSaturday != null) {
+			daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 0 };
+		    } else if(daysOfWeekObject.MondayToSunday != null) {
+                        daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
+                    } else {
+			daysCheck = new List<int> {
+			    ObjectToInt(daysOfWeekObject.Monday),
+			    ObjectToInt(daysOfWeekObject.Tuesday),
+			    ObjectToInt(daysOfWeekObject.Wednesday),
+			    ObjectToInt(daysOfWeekObject.Thursday),
+			    ObjectToInt(daysOfWeekObject.Friday),
+			    ObjectToInt(daysOfWeekObject.Saturday),
+			    ObjectToInt(daysOfWeekObject.Sunday)
+			};
+		    }
 
                     // Which bank holidays does the service NOT run on?
                     if (VehicleJourney.OperatingProfile.BankHolidayOperation != null)
@@ -2673,22 +2683,12 @@ public class Route
 
         private object fridayField;
 
-        //EDIT
-        private object holidaysonlyField; //Edit
+	private object mondayToFridayField;
 
-        /// <remarks/>
-        public object HolidaysOnly
-        {
-            get
-            {
-                return this.holidaysonlyField;
-            }
-            set
-            {
-                this.holidaysonlyField = value;
-            }
-        }
+	private object mondayToSaturdayField;
 
+	private object mondayToSundayField;
+	
         /// <remarks/>
         public object Monday
         {
@@ -2779,6 +2779,43 @@ public class Route
                 this.fridayField = value;
             }
         }
+
+	public object MondayToFriday
+	{
+	    get
+	    {
+		return this.mondayToFridayField;
+	    }
+	    set
+	    {
+		this.mondayToFridayField = value;
+	    }
+	}
+
+	public object MondayToSaturday
+	{
+	    get
+	    {
+		return this.mondayToSaturdayField;
+	    }
+	    set
+	    {
+		this.mondayToSaturdayField = value;
+	    }
+	}
+
+	public object MondayToSunday
+	{
+	    get
+	    {
+		return this.mondayToSundayField;
+	    }
+	    set
+	    {
+		this.mondayToSundayField = value;
+	    }
+	}
+
     }
 
     /// <remarks/>
