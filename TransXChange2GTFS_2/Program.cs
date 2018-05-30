@@ -29,6 +29,9 @@ namespace TransXChange2GTFS_2
         static List<String> routesSuccessProcessing = new List<String>();
         static BankHolidayDates bankHolidayDates = new BankHolidayDates();
 
+	// default for open ended end date
+	const string DEFAULT_END_DATE = "20991231";
+	
         static void Main(string[] args)
         {
             bankHolidayDates.AllBankHolidays = new List<string>(new string[] { "20180101", "20180330", "20180402", "20180507", "20180528", "20180827", "20181225", "20181226" });
@@ -204,6 +207,12 @@ namespace TransXChange2GTFS_2
                     string calendarID = "cal_";
                     string startingDate = _txObject.Services.Service.OperatingPeriod.StartDate.ToString("yyyyMMdd");
                     string finishingDate = _txObject.Services.Service.OperatingPeriod.EndDate.ToString("yyyyMMdd");
+
+		    // set to default open ended end date
+		    if(finishingDate.Equals("00010101")) {
+			finishingDate = DEFAULT_END_DATE;
+		    }
+		    
                     string direction;
 
                     DateTime currentDepartureTime = VehicleJourney.DepartureTime;
