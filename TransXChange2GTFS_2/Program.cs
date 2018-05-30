@@ -349,7 +349,7 @@ namespace TransXChange2GTFS_2
 
                 Route route = new Route();
                 route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
-                route.route_long_name = _txObject.Services.Service.Description;
+                route.route_long_name = _txObject.Services.Service.Description.Trim();
                 route.route_id = _txObject.Services.Service.ServiceCode;
                 route.agency_id = operatorDetails.id;
                 route.route_color = null;
