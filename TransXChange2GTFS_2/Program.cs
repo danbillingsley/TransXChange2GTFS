@@ -30,7 +30,7 @@ namespace TransXChange2GTFS_2
         static BankHolidayDates bankHolidayDates = new BankHolidayDates();
 
 	// default for open ended end date
-	const string DEFAULT_END_DATE = "20991231";
+	const string DEFAULT_END_DATE = "20281231";
 
 	// to avoid duplciate route entries
 	static HashSet<string> processedRoutes = new HashSet<string>();
