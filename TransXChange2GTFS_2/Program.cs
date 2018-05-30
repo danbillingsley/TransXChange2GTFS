@@ -31,6 +31,10 @@ namespace TransXChange2GTFS_2
 
 	// default for open ended end date
 	const string DEFAULT_END_DATE = "20991231";
+
+	// to avoid duplciate route entries
+	static HashSet<string> processedRoutes = new HashSet<string>();
+
 	
         static void Main(string[] args)
         {
@@ -82,7 +86,6 @@ namespace TransXChange2GTFS_2
             List<string> stopArray;
             List<string> stopTimesArray;
             List<string> timeGapArray;
-
             // Timings
             TransXChangeVehicleJourney[] VehicleJourneys = _txObject.VehicleJourneys;
             foreach (TransXChangeVehicleJourney VehicleJourney in VehicleJourneys)
@@ -204,22 +207,23 @@ namespace TransXChange2GTFS_2
                         }
                     }
 
-                    string calendarID = "cal_";
                     string startingDate = _txObject.Services.Service.OperatingPeriod.StartDate.ToString("yyyyMMdd");
                     string finishingDate = _txObject.Services.Service.OperatingPeriod.EndDate.ToString("yyyyMMdd");
-
+		    
 		    // set to default open ended end date
 		    if(finishingDate.Equals("00010101")) {
 			finishingDate = DEFAULT_END_DATE;
 		    }
 		    
+                    string calendarID = "cal_" + startingDate + "_" + finishingDate + "_";
+
                     string direction;
 
                     DateTime currentDepartureTime = VehicleJourney.DepartureTime;
                     string currentDepartureTimeFormat = (currentDepartureTime.ToString("HH:mm"));
 
                     string currentPattern = journeyPatternRef;
-
+		    
                     direction = _txObject.Services.Service.StandardService.JourneyPattern.Where(x => x.id == currentPattern).FirstOrDefault().Direction;
                     if (direction == "inbound")
                     {
@@ -347,18 +351,24 @@ namespace TransXChange2GTFS_2
                     mode = "3"; // there are more modes, but you need to look them up.
                 }
 
-                Route route = new Route();
-                route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
-                route.route_long_name = _txObject.Services.Service.Description.Trim();
-                route.route_id = _txObject.Services.Service.ServiceCode;
-                route.agency_id = operatorDetails.id;
-                route.route_color = null;
-                route.route_desc = null;
-                route.route_text_color = null;
-                route.route_url = null;
-                route.route_type = mode;
-                RoutesList.Add(route);
-
+		// avoid duplicate route entries.
+		string routeId = _txObject.Services.Service.ServiceCode;
+		if(processedRoutes.Contains(routeId)) {
+		    Console.Error.WriteLine("skipping duplicate route: " + routeId);
+		} else {
+		    processedRoutes.Add(routeId);
+		    Route route = new Route();
+		    route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
+		    route.route_long_name = _txObject.Services.Service.Description.Trim();
+		    route.route_id = routeId;
+		    route.agency_id = operatorDetails.id;
+		    route.route_color = null;
+		    route.route_desc = null;
+		    route.route_text_color = null;
+		    route.route_url = null;
+		    route.route_type = mode;
+		    RoutesList.Add(route);
+		}
                 TransXChangeAnnotatedStopPointRef[] arrayOfStops = _txObject.StopPoints;
                 foreach (TransXChangeAnnotatedStopPointRef stop in arrayOfStops)
                 {
@@ -411,7 +421,9 @@ namespace TransXChange2GTFS_2
                     Trip newTrip = new Trip();
                     newTrip.route_id = InternalRoute.Service;
                     newTrip.service_id = InternalRoute.Calendar + InternalRoute.Service + "-" + internalRouteIndex;
-                    newTrip.trip_id = InternalRoute.Service + "-" + internalRouteIndex;
+		    // can avoid duplicate trips by using (cal_from_to_id) since
+		    // there is 1 trip per calendar entry.
+                    newTrip.trip_id = newTrip.service_id; //InternalRoute.Service + "-" + internalRouteIndex;
                     newTrip.trip_headsign = null;
                     newTrip.direction_id = InternalRoute.Direction;
                     newTrip.block_id = null;
@@ -436,7 +448,7 @@ namespace TransXChange2GTFS_2
                     for (var j = 0; j < InternalRoute.Stops.Count; j++)
                     {
                         StopTime newStopTime = new StopTime();
-                        newStopTime.trip_id = InternalRoute.Service + "-" + internalRouteIndex;
+                        newStopTime.trip_id = newTrip.trip_id; //InternalRoute.Service + "-" + internalRouteIndex;
                         newStopTime.arrival_time = InternalRoute.Times[j];
                         newStopTime.departure_time = InternalRoute.Times[j];
                         newStopTime.stop_id = InternalRoute.Stops[j];
