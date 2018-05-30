@@ -87,21 +87,29 @@ namespace TransXChange2GTFS_2
                 List<string> noServiceDays = new List<string> { };
                 List<string> extraServiceDays = new List<string> { };
 
-                if(VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek == null) // skip invalid
-                    continue;
-
                 string journeyPatternRef = VehicleJourney.JourneyPatternRef;
-                try
+
+		// skip if HolidaysOnly (TODO)
+                if(VehicleJourney.OperatingProfile.RegularDayType.HolidaysOnly != null) {
+		    Console.Error.WriteLine("skip: " + journeyPatternRef);
+		    continue;
+		}
+
+		try
                 {
-                    TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekObject = VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek;
                     // Which days of the week does the service run on?
-		    if(daysOfWeekObject.MondayToFriday != null) {
+                    TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekObject = VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek;
+		    if(daysOfWeekObject == null) {
+			// if DaysOfWeek not specified, default to mon-sun as per spec.
+			daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
+		    } else if(daysOfWeekObject.MondayToFriday != null) {
 			daysCheck = new List<int> { 1, 1, 1, 1, 1, 0, 0 };
                     } else if(daysOfWeekObject.MondayToSaturday != null) {
 			daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 0 };
 		    } else if(daysOfWeekObject.MondayToSunday != null) {
                         daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
                     } else {
+			// specific pattern of days
 			daysCheck = new List<int> {
 			    ObjectToInt(daysOfWeekObject.Monday),
 			    ObjectToInt(daysOfWeekObject.Tuesday),
@@ -111,6 +119,10 @@ namespace TransXChange2GTFS_2
 			    ObjectToInt(daysOfWeekObject.Saturday),
 			    ObjectToInt(daysOfWeekObject.Sunday)
 			};
+			// if DaysOfWeek not specified (DaysOfWeek present, days not specified),
+			// default to mon-sun as per spec.
+			if(daysCheck.Sum() == 0)
+			    daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
 		    }
 
                     // Which bank holidays does the service NOT run on?
@@ -2647,7 +2659,8 @@ public class Route
     {
 
         private TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekField;
-
+	private TransXChangeVehicleJourneyOperatingProfileRegularDayTypeHolidaysOnly holidaysOnlyField;
+	
         /// <remarks/>
         public TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek DaysOfWeek
         {
@@ -2660,6 +2673,26 @@ public class Route
                 this.daysOfWeekField = value;
             }
         }
+
+	public TransXChangeVehicleJourneyOperatingProfileRegularDayTypeHolidaysOnly HolidaysOnly
+        {
+            get
+            {
+                return this.holidaysOnlyField;
+            }
+            set
+            {
+                this.holidaysOnlyField = value;
+            }
+        }
+
+    }
+
+    [System.SerializableAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://www.transxchange.org.uk/")]
+    public partial class TransXChangeVehicleJourneyOperatingProfileRegularDayTypeHolidaysOnly
+    {
     }
 
     /// <remarks/>
