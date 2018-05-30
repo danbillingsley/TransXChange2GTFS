@@ -1887,34 +1887,18 @@ public class Route
                 this.startDateField = value;
             }
         }
+
         /// <remarks/>
         [System.Xml.Serialization.XmlElementAttribute(DataType = "date")]
         public System.DateTime EndDate
         {
             get
-            // {   if (EndDate != null)
-            //     {
-            //         return this.endDateField;
-            //     }
-            //     else
-            //     {
-            //         this.endDateField = new DateTime(2999, 8, 1);
-            //      }
-            // }
             {
                 return this.endDateField;
             }
             set
-            {  
-                if (EndDate != null)
-                {
-                    this.endDateField = value;
-                }
-                else
-                {
-                    DateTime default_date = new DateTime(2019, 8, 18);
-                    this.endDateField = default_date;
-                }
+            {
+                this.endDateField = value;
             }
         }
     }
