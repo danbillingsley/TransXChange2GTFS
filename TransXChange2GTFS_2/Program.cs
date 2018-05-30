@@ -108,7 +108,9 @@ namespace TransXChange2GTFS_2
 			daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 0 };
 		    } else if(daysOfWeekObject.MondayToSunday != null) {
                         daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
-                    } else {
+                    } else if(daysOfWeekObject.Weekend != null) {
+			daysCheck = new List<int> { 0, 0, 0, 0, 0, 1, 1 };
+		    } else {
 			// specific pattern of days
 			daysCheck = new List<int> {
 			    ObjectToInt(daysOfWeekObject.Monday),
@@ -2721,6 +2723,8 @@ public class Route
 	private object mondayToSaturdayField;
 
 	private object mondayToSundayField;
+
+	private object weekendField;
 	
         /// <remarks/>
         public object Monday
@@ -2849,6 +2853,17 @@ public class Route
 	    }
 	}
 
+	public object Weekend
+	{
+	    get
+	    {
+		return this.weekendField;
+	    }
+	    set
+	    {
+		this.weekendField = value;
+	    }
+	}
     }
 
     /// <remarks/>
