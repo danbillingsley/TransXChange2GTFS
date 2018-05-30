@@ -443,7 +443,7 @@ namespace TransXChange2GTFS_2
                         newStopTime.stop_sequence = j + 1;
                         newStopTime.stop_headsign = null;
                         newStopTime.pickup_type = null;
-                        newStopTime.drop_off_time = null;
+                        newStopTime.drop_off_type = null;
                         newStopTime.shape_dist_traveled = null;
                         stopTimesList.Add(newStopTime);
                     }
@@ -624,7 +624,7 @@ namespace TransXChange2GTFS_2
         public int stop_sequence { get; set; }
         public string stop_headsign { get; set; }
         public string pickup_type { get; set; }
-        public string drop_off_time { get; set; }
+        public string drop_off_type { get; set; }
         public string shape_dist_traveled { get; set; }
     }
 
