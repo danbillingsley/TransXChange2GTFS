@@ -331,13 +331,13 @@ namespace TransXChange2GTFS_2
 
                 // Adding a new agency  
                 Agency agency = new Agency();
-                agency.agency_id = operatorDetails.id;
+                agency.agency_id = operatorDetails.NationalOperatorCode;
                 agency.agency_name = operatorDetails.OperatorShortName;
                 agency.agency_url = "https://www.google.com/search?q="+operatorDetails.OperatorShortName; // google plus name of agency by default
                 agency.agency_timezone = "Europe/London"; // Europe/London by default
 
                 // Check whether this agency is contained within the list
-                var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.id);
+                var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.NationalOperatorCode);
                 if (agencyCheck == null)
                 {
                     AgencyList.Add(agency);
@@ -361,7 +361,7 @@ namespace TransXChange2GTFS_2
 		    route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
 		    route.route_long_name = _txObject.Services.Service.Description.Trim();
 		    route.route_id = routeId;
-		    route.agency_id = operatorDetails.id;
+		    route.agency_id = operatorDetails.NationalOperatorCode;
 		    route.route_color = null;
 		    route.route_desc = null;
 		    route.route_text_color = null;
