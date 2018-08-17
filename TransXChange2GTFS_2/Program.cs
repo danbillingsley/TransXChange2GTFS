@@ -54,7 +54,7 @@ namespace TransXChange2GTFS_2
             csvReader.Configuration.Delimiter = ",";
             NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
 
-            foreach (string filePath in Directory.EnumerateFiles(@"exampleTransXChange", "*.xml"))
+            foreach (string filePath in Directory.EnumerateFiles(@"input", "*.xml"))
             {
                 convertTransXChange2GTFS(filePath);
             }
