@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -29,6 +29,13 @@ namespace TransXChange2GTFS_2
         static List<String> routesSuccessProcessing = new List<String>();
         static BankHolidayDates bankHolidayDates = new BankHolidayDates();
 
+	// default for open ended end date
+	const string DEFAULT_END_DATE = "20200101";
+
+	// to avoid duplciate route entries
+	static HashSet<string> processedRoutes = new HashSet<string>();
+
+	
         static void Main(string[] args)
         {
             bankHolidayDates.AllBankHolidays = new List<string>(new string[] { "20180101", "20180330", "20180402", "20180507", "20180528", "20180827", "20181225", "20181226" });
@@ -79,7 +86,6 @@ namespace TransXChange2GTFS_2
             List<string> stopArray;
             List<string> stopTimesArray;
             List<string> timeGapArray;
-
             // Timings
             TransXChangeVehicleJourney[] VehicleJourneys = _txObject.VehicleJourneys;
             foreach (TransXChangeVehicleJourney VehicleJourney in VehicleJourneys)
@@ -88,19 +94,44 @@ namespace TransXChange2GTFS_2
                 List<string> extraServiceDays = new List<string> { };
 
                 string journeyPatternRef = VehicleJourney.JourneyPatternRef;
-                try
+
+		// skip if HolidaysOnly (TODO)
+                if(VehicleJourney.OperatingProfile.RegularDayType.HolidaysOnly != null) {
+		    Console.Error.WriteLine("skip: " + journeyPatternRef);
+		    continue;
+		}
+
+		try
                 {
-                    TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekObject = VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek;
                     // Which days of the week does the service run on?
-                    daysCheck = new List<int> {
-                    ObjectToInt(daysOfWeekObject.Monday),
-                    ObjectToInt(daysOfWeekObject.Tuesday),
-                    ObjectToInt(daysOfWeekObject.Wednesday),
-                    ObjectToInt(daysOfWeekObject.Thursday),
-                    ObjectToInt(daysOfWeekObject.Friday),
-                    ObjectToInt(daysOfWeekObject.Saturday),
-                    ObjectToInt(daysOfWeekObject.Sunday),
-                };
+                    TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekObject = VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek;
+		    if(daysOfWeekObject == null) {
+			// if DaysOfWeek not specified, default to mon-sun as per spec.
+			daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
+		    } else if(daysOfWeekObject.MondayToFriday != null) {
+			daysCheck = new List<int> { 1, 1, 1, 1, 1, 0, 0 };
+                    } else if(daysOfWeekObject.MondayToSaturday != null) {
+			daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 0 };
+		    } else if(daysOfWeekObject.MondayToSunday != null) {
+                        daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
+                    } else if(daysOfWeekObject.Weekend != null) {
+			daysCheck = new List<int> { 0, 0, 0, 0, 0, 1, 1 };
+		    } else {
+			// specific pattern of days
+			daysCheck = new List<int> {
+			    ObjectToInt(daysOfWeekObject.Monday),
+			    ObjectToInt(daysOfWeekObject.Tuesday),
+			    ObjectToInt(daysOfWeekObject.Wednesday),
+			    ObjectToInt(daysOfWeekObject.Thursday),
+			    ObjectToInt(daysOfWeekObject.Friday),
+			    ObjectToInt(daysOfWeekObject.Saturday),
+			    ObjectToInt(daysOfWeekObject.Sunday)
+			};
+			// if DaysOfWeek not specified (DaysOfWeek present, days not specified),
+			// default to mon-sun as per spec.
+			if(daysCheck.Sum() == 0)
+			    daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
+		    }
 
                     // Which bank holidays does the service NOT run on?
                     if (VehicleJourney.OperatingProfile.BankHolidayOperation != null)
@@ -176,16 +207,23 @@ namespace TransXChange2GTFS_2
                         }
                     }
 
-                    string calendarID = "cal_";
                     string startingDate = _txObject.Services.Service.OperatingPeriod.StartDate.ToString("yyyyMMdd");
                     string finishingDate = _txObject.Services.Service.OperatingPeriod.EndDate.ToString("yyyyMMdd");
+		    
+		    // set to default open ended end date
+		    if(finishingDate.Equals("00010101")) {
+			finishingDate = DEFAULT_END_DATE;
+		    }
+		    
+                    string calendarID = "cal_" + startingDate + "_" + finishingDate + "_";
+
                     string direction;
 
                     DateTime currentDepartureTime = VehicleJourney.DepartureTime;
                     string currentDepartureTimeFormat = (currentDepartureTime.ToString("HH:mm"));
 
                     string currentPattern = journeyPatternRef;
-
+		    
                     direction = _txObject.Services.Service.StandardService.JourneyPattern.Where(x => x.id == currentPattern).FirstOrDefault().Direction;
                     if (direction == "inbound")
                     {
@@ -242,10 +280,18 @@ namespace TransXChange2GTFS_2
                         {
                             // Remove the leading and trailing sections of the time leaving only the amount of seconds to add on.
                             string timeGap = timeGapArray[j - 1].ToString();
-                            // I've added the "M" -- not sure if that's safe
-                            string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty).Replace("M", string.Empty);
-                            int timeIncrease = int.Parse(cleanedTimeGap);
-                            stopsTime = stopsTime.AddSeconds(timeIncrease);
+                            if (timeGap.EndsWith("S")== true)
+                            {
+                                string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty);
+                                int timeIncrease = int.Parse(cleanedTimeGap);
+                                stopsTime = stopsTime.AddSeconds(timeIncrease);
+                            }
+                            else
+                            {
+                                 string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("M", string.Empty);
+                                 int timeIncrease = int.Parse(cleanedTimeGap);
+                                 stopsTime = stopsTime.AddMinutes(timeIncrease);
+                            }
                             stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
                         }
                     }
@@ -284,13 +330,13 @@ namespace TransXChange2GTFS_2
 
                 // Adding a new agency  
                 Agency agency = new Agency();
-                agency.agency_id = operatorDetails.id;
+                agency.agency_id = operatorDetails.NationalOperatorCode;
                 agency.agency_name = operatorDetails.OperatorShortName;
-                agency.agency_url = null;
-                agency.agency_timezone = null;
+                agency.agency_url = "https://www.google.com/search?q="+operatorDetails.OperatorShortName; // google plus name of agency by default
+                agency.agency_timezone = "Europe/London"; // Europe/London by default
 
                 // Check whether this agency is contained within the list
-                var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.id);
+                var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.NationalOperatorCode);
                 if (agencyCheck == null)
                 {
                     AgencyList.Add(agency);
@@ -304,18 +350,24 @@ namespace TransXChange2GTFS_2
                     mode = "3"; // there are more modes, but you need to look them up.
                 }
 
-                Route route = new Route();
-                route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
-                route.route_long_name = _txObject.Services.Service.Description;
-                route.route_id = _txObject.Services.Service.ServiceCode;
-                route.agency_id = operatorDetails.id;
-                route.route_color = null;
-                route.route_desc = null;
-                route.route_text_color = null;
-                route.route_url = null;
-                route.route_type = mode;
-                RoutesList.Add(route);
-
+		// avoid duplicate route entries.
+		string routeId = _txObject.Services.Service.ServiceCode;
+		if(processedRoutes.Contains(routeId)) {
+		    Console.Error.WriteLine("skipping duplicate route: " + routeId);
+		} else {
+		    processedRoutes.Add(routeId);
+		    Route route = new Route();
+		    route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
+		    route.route_long_name = _txObject.Services.Service.Description.Trim();
+		    route.route_id = routeId;
+		    route.agency_id = operatorDetails.NationalOperatorCode;
+		    route.route_color = null;
+		    route.route_desc = null;
+		    route.route_text_color = null;
+		    route.route_url = null;
+		    route.route_type = mode;
+		    RoutesList.Add(route);
+		}
                 TransXChangeAnnotatedStopPointRef[] arrayOfStops = _txObject.StopPoints;
                 foreach (TransXChangeAnnotatedStopPointRef stop in arrayOfStops)
                 {
@@ -336,8 +388,11 @@ namespace TransXChange2GTFS_2
                             GTFSnaptanStop.stop_name = naptanStop.CommonName;
                             GTFSnaptanStop.stop_lat = naptanStop.Latitude;
                             GTFSnaptanStop.stop_lon = naptanStop.Longitude;
-                            GTFSnaptanStop.stop_url = "NULL";
-                            GTFSnaptanStop.vehicle_type = "3";
+                            GTFSnaptanStop.stop_url = "";
+                            // need to extract this from naptan data.
+			    // 300 = bus
+			    // https://developers.google.com/transit/gtfs/reference/extended-route-types
+                            //GTFSnaptanStop.vehicle_type = "3";
                             StopsList.Add(naptanStop);
                             GTFSStopsList.Add(GTFSnaptanStop);
                         }
@@ -365,7 +420,9 @@ namespace TransXChange2GTFS_2
                     Trip newTrip = new Trip();
                     newTrip.route_id = InternalRoute.Service;
                     newTrip.service_id = InternalRoute.Calendar + InternalRoute.Service + "-" + internalRouteIndex;
-                    newTrip.trip_id = InternalRoute.Service + "-" + internalRouteIndex;
+		    // can avoid duplicate trips by using (cal_from_to_id) since
+		    // there is 1 trip per calendar entry.
+                    newTrip.trip_id = newTrip.service_id; //InternalRoute.Service + "-" + internalRouteIndex;
                     newTrip.trip_headsign = null;
                     newTrip.direction_id = InternalRoute.Direction;
                     newTrip.block_id = null;
@@ -390,14 +447,14 @@ namespace TransXChange2GTFS_2
                     for (var j = 0; j < InternalRoute.Stops.Count; j++)
                     {
                         StopTime newStopTime = new StopTime();
-                        newStopTime.trip_id = InternalRoute.Service + "-" + internalRouteIndex;
+                        newStopTime.trip_id = newTrip.trip_id; //InternalRoute.Service + "-" + internalRouteIndex;
                         newStopTime.arrival_time = InternalRoute.Times[j];
                         newStopTime.departure_time = InternalRoute.Times[j];
                         newStopTime.stop_id = InternalRoute.Stops[j];
                         newStopTime.stop_sequence = j + 1;
                         newStopTime.stop_headsign = null;
                         newStopTime.pickup_type = null;
-                        newStopTime.drop_off_time = null;
+                        newStopTime.drop_off_type = null;
                         newStopTime.shape_dist_traveled = null;
                         stopTimesList.Add(newStopTime);
                     }
@@ -429,52 +486,52 @@ namespace TransXChange2GTFS_2
         }
 
         static void writeGTFS() {
-            Console.WriteLine("Writing agency.csv");
-            // write GTFS csvs.
+            Console.WriteLine("Writing agency.txt");
+            // write GTFS txts.
             // agency.txt, calendar.txt, calendar_dates.txt, routes.txt, stop_times.txt, stops.txt, trips.txt
-            TextWriter agencyTextWriter = File.CreateText("agency.csv");
+            TextWriter agencyTextWriter = File.CreateText(@"output/agency.txt");
             CsvWriter agencyCSVwriter = new CsvWriter(agencyTextWriter);
             agencyCSVwriter.WriteRecords(AgencyList);
             agencyTextWriter.Dispose();
             agencyCSVwriter.Dispose();
 
-            Console.WriteLine("Writing stops.csv");
-            TextWriter stopsTextWriter = File.CreateText("stops.csv");
+            Console.WriteLine("Writing stops.txt");
+            TextWriter stopsTextWriter = File.CreateText(@"output/stops.txt");
             CsvWriter stopsCSVwriter = new CsvWriter(stopsTextWriter);
             stopsCSVwriter.WriteRecords(GTFSStopsList);
             stopsTextWriter.Dispose();
             stopsCSVwriter.Dispose();
 
-            Console.WriteLine("Writing routes.csv");
-            TextWriter routesTextWriter = File.CreateText("routes.csv");
+            Console.WriteLine("Writing routes.txt");
+            TextWriter routesTextWriter = File.CreateText(@"output/routes.txt");
             CsvWriter routesCSVwriter = new CsvWriter(routesTextWriter);
             routesCSVwriter.WriteRecords(RoutesList);
             routesTextWriter.Dispose();
             routesCSVwriter.Dispose();
 
-            Console.WriteLine("Writing trips.csv");
-            TextWriter tripsTextWriter = File.CreateText("trips.csv");
+            Console.WriteLine("Writing trips.txt");
+            TextWriter tripsTextWriter = File.CreateText(@"output/trips.txt");
             CsvWriter tripsCSVwriter = new CsvWriter(tripsTextWriter);
             tripsCSVwriter.WriteRecords(tripList);
             tripsTextWriter.Dispose();
             tripsCSVwriter.Dispose();
 
-            Console.WriteLine("Writing calendar.csv");
-            TextWriter calendarTextWriter = File.CreateText("calendar.csv");
+            Console.WriteLine("Writing calendar.txt");
+            TextWriter calendarTextWriter = File.CreateText(@"output/calendar.txt");
             CsvWriter calendarCSVwriter = new CsvWriter(calendarTextWriter);
             calendarCSVwriter.WriteRecords(calendarList);
             calendarTextWriter.Dispose();
             calendarCSVwriter.Dispose();
 
-            Console.WriteLine("Writing stop_times.csv");
-            TextWriter stopTimeTextWriter = File.CreateText("stop_times.csv");
+            Console.WriteLine("Writing stop_times.txt");
+            TextWriter stopTimeTextWriter = File.CreateText(@"output/stop_times.txt");
             CsvWriter stopTimeCSVwriter = new CsvWriter(stopTimeTextWriter);
             stopTimeCSVwriter.WriteRecords(stopTimesList);
             stopTimeTextWriter.Dispose();
             stopTimeCSVwriter.Dispose();
 
-            Console.WriteLine("Writing calendar_dates.csv");
-            TextWriter calendarDatesTextWriter = File.CreateText("calendar_dates.csv");
+            Console.WriteLine("Writing calendar_dates.txt");
+            TextWriter calendarDatesTextWriter = File.CreateText(@"output/calendar_dates.txt");
             CsvWriter calendarDatesCSVwriter = new CsvWriter(calendarDatesTextWriter);
             calendarDatesCSVwriter.WriteRecords(calendarExceptionsList);
             calendarDatesTextWriter.Dispose();
@@ -487,7 +544,7 @@ namespace TransXChange2GTFS_2
         {
             int totalRoutesProcessed = routesSuccessProcessing.Count() + routesFailingProcessing.Count();
             string text = "Total routes processed: " + totalRoutesProcessed + "\r\nRoutes processed successfully: " + routesSuccessProcessing.Count() + "\r\nRoutes failing processing: " + routesFailingProcessing.Count() + "\r\nFailed routes:\r\n" + String.Join("\r\n", routesFailingProcessing.ToArray());
-            System.IO.File.WriteAllText(@"report.txt", text);
+            System.IO.File.WriteAllText(@"output/report.txt", text);
         }
 
         static int ObjectToInt(object input)
@@ -578,7 +635,7 @@ namespace TransXChange2GTFS_2
         public int stop_sequence { get; set; }
         public string stop_headsign { get; set; }
         public string pickup_type { get; set; }
-        public string drop_off_time { get; set; }
+        public string drop_off_type { get; set; }
         public string shape_dist_traveled { get; set; }
     }
 
@@ -591,7 +648,7 @@ namespace TransXChange2GTFS_2
         public double stop_lat { get; set; }
         public double stop_lon { get; set; }
         public string stop_url { get; set; }
-        public string vehicle_type { get; set; }
+        //public string vehicle_type { get; set; }
     }
 
     public class NaptanStop
@@ -2608,7 +2665,8 @@ public class Route
     {
 
         private TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekField;
-
+	private TransXChangeVehicleJourneyOperatingProfileRegularDayTypeHolidaysOnly holidaysOnlyField;
+	
         /// <remarks/>
         public TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek DaysOfWeek
         {
@@ -2621,6 +2679,26 @@ public class Route
                 this.daysOfWeekField = value;
             }
         }
+
+	public TransXChangeVehicleJourneyOperatingProfileRegularDayTypeHolidaysOnly HolidaysOnly
+        {
+            get
+            {
+                return this.holidaysOnlyField;
+            }
+            set
+            {
+                this.holidaysOnlyField = value;
+            }
+        }
+
+    }
+
+    [System.SerializableAttribute()]
+    [System.ComponentModel.DesignerCategoryAttribute("code")]
+    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://www.transxchange.org.uk/")]
+    public partial class TransXChangeVehicleJourneyOperatingProfileRegularDayTypeHolidaysOnly
+    {
     }
 
     /// <remarks/>
@@ -2644,6 +2722,14 @@ public class Route
 
         private object fridayField;
 
+	private object mondayToFridayField;
+
+	private object mondayToSaturdayField;
+
+	private object mondayToSundayField;
+
+	private object weekendField;
+	
         /// <remarks/>
         public object Monday
         {
@@ -2734,6 +2820,54 @@ public class Route
                 this.fridayField = value;
             }
         }
+
+	public object MondayToFriday
+	{
+	    get
+	    {
+		return this.mondayToFridayField;
+	    }
+	    set
+	    {
+		this.mondayToFridayField = value;
+	    }
+	}
+
+	public object MondayToSaturday
+	{
+	    get
+	    {
+		return this.mondayToSaturdayField;
+	    }
+	    set
+	    {
+		this.mondayToSaturdayField = value;
+	    }
+	}
+
+	public object MondayToSunday
+	{
+	    get
+	    {
+		return this.mondayToSundayField;
+	    }
+	    set
+	    {
+		this.mondayToSundayField = value;
+	    }
+	}
+
+	public object Weekend
+	{
+	    get
+	    {
+		return this.weekendField;
+	    }
+	    set
+	    {
+		this.weekendField = value;
+	    }
+	}
     }
 
     /// <remarks/>
