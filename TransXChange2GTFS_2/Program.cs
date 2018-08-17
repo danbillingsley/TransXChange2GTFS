@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -280,7 +280,6 @@ namespace TransXChange2GTFS_2
                         {
                             // Remove the leading and trailing sections of the time leaving only the amount of seconds to add on.
                             string timeGap = timeGapArray[j - 1].ToString();
-                            // I've added the "M" -- not sure if that's safe (MH Edit: some .xml files contain M instead of S, need to check first)
                             if (timeGap.EndsWith("S")== true)
                             {
                                 string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty);
