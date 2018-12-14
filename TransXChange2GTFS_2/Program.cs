@@ -7,6 +7,8 @@ using System.Xml.Serialization;
 using System.Linq;
 using CsvHelper;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
+
 // Reference to GTFS standard https://developers.google.com/transit/gtfs/reference/#agencytxt
 
 namespace TransXChange2GTFS_2
@@ -278,20 +280,14 @@ namespace TransXChange2GTFS_2
                         // For subsequent stops work out the time between stops
                         else
                         {
-                            // Remove the leading and trailing sections of the time leaving only the amount of seconds to add on.
+                            // Extract the number of minutes/seconds to add on from RunTime (in the format "PTnnMnnS")
                             string timeGap = timeGapArray[j - 1].ToString();
-                            if (timeGap.EndsWith("S")== true)
-                            {
-                                string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty);
-                                int timeIncrease = int.Parse(cleanedTimeGap);
-                                stopsTime = stopsTime.AddSeconds(timeIncrease);
-                            }
-                            else
-                            {
-                                 string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("M", string.Empty);
-                                 int timeIncrease = int.Parse(cleanedTimeGap);
-                                 stopsTime = stopsTime.AddMinutes(timeIncrease);
-                            }
+
+                            var minRegexMatches = Regex.Match(timeGap, @"(\d+)M");
+                            stopsTime = stopsTime.AddMinutes(minRegexMatches.Success ? double.Parse(minRegexMatches.Groups[1].Value) : 0);
+                            var secRegexMatches = Regex.Match(timeGap, @"(\d+)S");
+                            stopsTime = stopsTime.AddSeconds(secRegexMatches.Success ? double.Parse(secRegexMatches.Groups[1].Value) : 0);
+
                             stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
                         }
                     }
