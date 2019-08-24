@@ -49,7 +49,7 @@ namespace TransXChange2GTFS_2
             bankHolidayDates.NewYearsDay = "20180101";
 
             //Reading NAPTAN
-            TextReader textReader = File.OpenText("NaptanStops.csv");
+            TextReader textReader = File.OpenText("Stops.csv");
             CsvReader csvReader = new CsvReader(textReader);
             csvReader.Configuration.Delimiter = ",";
             NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
@@ -95,43 +95,55 @@ namespace TransXChange2GTFS_2
 
                 string journeyPatternRef = VehicleJourney.JourneyPatternRef;
 
-		// skip if HolidaysOnly (TODO)
-                if(VehicleJourney.OperatingProfile.RegularDayType.HolidaysOnly != null) {
-		    Console.Error.WriteLine("skip: " + journeyPatternRef);
-		    continue;
-		}
+                // skip if HolidaysOnly (TODO)
+                if (VehicleJourney.OperatingProfile.RegularDayType.HolidaysOnly != null)
+                {
+                    Console.Error.WriteLine("skip (because holiday journey parsing isn't complete yet): " + journeyPatternRef);
+                    continue;
+                }
 
-		try
+                try
                 {
                     // Which days of the week does the service run on?
                     TransXChangeVehicleJourneyOperatingProfileRegularDayTypeDaysOfWeek daysOfWeekObject = VehicleJourney.OperatingProfile.RegularDayType.DaysOfWeek;
-		    if(daysOfWeekObject == null) {
-			// if DaysOfWeek not specified, default to mon-sun as per spec.
-			daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
-		    } else if(daysOfWeekObject.MondayToFriday != null) {
-			daysCheck = new List<int> { 1, 1, 1, 1, 1, 0, 0 };
-                    } else if(daysOfWeekObject.MondayToSaturday != null) {
-			daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 0 };
-		    } else if(daysOfWeekObject.MondayToSunday != null) {
+                    if (daysOfWeekObject == null)
+                    {
+                        // if DaysOfWeek not specified, default to mon-sun as per spec.
                         daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
-                    } else if(daysOfWeekObject.Weekend != null) {
-			daysCheck = new List<int> { 0, 0, 0, 0, 0, 1, 1 };
-		    } else {
-			// specific pattern of days
-			daysCheck = new List<int> {
-			    ObjectToInt(daysOfWeekObject.Monday),
-			    ObjectToInt(daysOfWeekObject.Tuesday),
-			    ObjectToInt(daysOfWeekObject.Wednesday),
-			    ObjectToInt(daysOfWeekObject.Thursday),
-			    ObjectToInt(daysOfWeekObject.Friday),
-			    ObjectToInt(daysOfWeekObject.Saturday),
-			    ObjectToInt(daysOfWeekObject.Sunday)
-			};
-			// if DaysOfWeek not specified (DaysOfWeek present, days not specified),
-			// default to mon-sun as per spec.
-			if(daysCheck.Sum() == 0)
-			    daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
-		    }
+                    }
+                    else if (daysOfWeekObject.MondayToFriday != null)
+                    {
+                        daysCheck = new List<int> { 1, 1, 1, 1, 1, 0, 0 };
+                    }
+                    else if (daysOfWeekObject.MondayToSaturday != null)
+                    {
+                        daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 0 };
+                    }
+                    else if (daysOfWeekObject.MondayToSunday != null)
+                    {
+                        daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
+                    }
+                    else if (daysOfWeekObject.Weekend != null)
+                    {
+                        daysCheck = new List<int> { 0, 0, 0, 0, 0, 1, 1 };
+                    }
+                    else
+                    {
+                        // specific pattern of days
+                        daysCheck = new List<int> {
+                ObjectToInt(daysOfWeekObject.Monday),
+                ObjectToInt(daysOfWeekObject.Tuesday),
+                ObjectToInt(daysOfWeekObject.Wednesday),
+                ObjectToInt(daysOfWeekObject.Thursday),
+                ObjectToInt(daysOfWeekObject.Friday),
+                ObjectToInt(daysOfWeekObject.Saturday),
+                ObjectToInt(daysOfWeekObject.Sunday)
+            };
+                        // if DaysOfWeek not specified (DaysOfWeek present, days not specified),
+                        // default to mon-sun as per spec.
+                        if (daysCheck.Sum() == 0)
+                            daysCheck = new List<int> { 1, 1, 1, 1, 1, 1, 1 };
+                    }
 
                     // Which bank holidays does the service NOT run on?
                     if (VehicleJourney.OperatingProfile.BankHolidayOperation != null)
@@ -209,12 +221,13 @@ namespace TransXChange2GTFS_2
 
                     string startingDate = _txObject.Services.Service.OperatingPeriod.StartDate.ToString("yyyyMMdd");
                     string finishingDate = _txObject.Services.Service.OperatingPeriod.EndDate.ToString("yyyyMMdd");
-		    
-		    // set to default open ended end date
-		    if(finishingDate.Equals("00010101")) {
-			finishingDate = DEFAULT_END_DATE;
-		    }
-		    
+
+                    // set to default open ended end date
+                    if (finishingDate.Equals("00010101"))
+                    {
+                        finishingDate = DEFAULT_END_DATE;
+                    }
+
                     string calendarID = "cal_" + startingDate + "_" + finishingDate + "_";
 
                     string direction;
@@ -223,7 +236,7 @@ namespace TransXChange2GTFS_2
                     string currentDepartureTimeFormat = (currentDepartureTime.ToString("HH:mm"));
 
                     string currentPattern = journeyPatternRef;
-		    
+
                     direction = _txObject.Services.Service.StandardService.JourneyPattern.Where(x => x.id == currentPattern).FirstOrDefault().Direction;
                     if (direction == "inbound")
                     {
@@ -280,7 +293,7 @@ namespace TransXChange2GTFS_2
                         {
                             // Remove the leading and trailing sections of the time leaving only the amount of seconds to add on.
                             string timeGap = timeGapArray[j - 1].ToString();
-                            if (timeGap.EndsWith("S")== true)
+                            if (timeGap.EndsWith("S") == true)
                             {
                                 string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("S", string.Empty);
                                 int timeIncrease = int.Parse(cleanedTimeGap);
@@ -288,9 +301,9 @@ namespace TransXChange2GTFS_2
                             }
                             else
                             {
-                                 string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("M", string.Empty);
-                                 int timeIncrease = int.Parse(cleanedTimeGap);
-                                 stopsTime = stopsTime.AddMinutes(timeIncrease);
+                                string cleanedTimeGap = timeGap.Split(new string[] { "PT" }, StringSplitOptions.None)[1].Replace("M", string.Empty);
+                                int timeIncrease = int.Parse(cleanedTimeGap);
+                                stopsTime = stopsTime.AddMinutes(timeIncrease);
                             }
                             stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
                         }
@@ -332,7 +345,7 @@ namespace TransXChange2GTFS_2
                 Agency agency = new Agency();
                 agency.agency_id = operatorDetails.NationalOperatorCode;
                 agency.agency_name = operatorDetails.OperatorShortName;
-                agency.agency_url = "https://www.google.com/search?q="+operatorDetails.OperatorShortName; // google plus name of agency by default
+                agency.agency_url = "https://www.google.com/search?q=" + operatorDetails.OperatorShortName; // google plus name of agency by default
                 agency.agency_timezone = "Europe/London"; // Europe/London by default
 
                 // Check whether this agency is contained within the list
@@ -349,32 +362,43 @@ namespace TransXChange2GTFS_2
                 {
                     mode = "3"; // there are more modes, but you need to look them up.
                 }
+                else if (_txObject.Services.Service.Mode == "tram")
+                {
+                    mode = "0"; // yes there are more modes, here's the tram one.
+                }
+                else if (_txObject.Services.Service.Mode == "underground")
+                {
+                    mode = "1"; // yes there are more modes, and here's the london underground one.
+                }
 
-		// avoid duplicate route entries.
-		string routeId = _txObject.Services.Service.ServiceCode;
-		if(processedRoutes.Contains(routeId)) {
-		    Console.Error.WriteLine("skipping duplicate route: " + routeId);
-		} else {
-		    processedRoutes.Add(routeId);
-		    Route route = new Route();
-		    route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
-		    route.route_long_name = _txObject.Services.Service.Description.Trim();
-		    route.route_id = routeId;
-		    route.agency_id = operatorDetails.NationalOperatorCode;
-		    route.route_color = null;
-		    route.route_desc = null;
-		    route.route_text_color = null;
-		    route.route_url = null;
-		    route.route_type = mode;
-		    RoutesList.Add(route);
-		}
+                // avoid duplicate route entries.
+                string routeId = _txObject.Services.Service.ServiceCode;
+                if (processedRoutes.Contains(routeId))
+                {
+                    Console.Error.WriteLine("skipping duplicate route: " + routeId);
+                }
+                else
+                {
+                    processedRoutes.Add(routeId);
+                    Route route = new Route();
+                    route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
+                    route.route_long_name = _txObject.Services.Service.Description.Trim();
+                    route.route_id = routeId;
+                    route.agency_id = operatorDetails.NationalOperatorCode;
+                    route.route_color = null;
+                    route.route_desc = null;
+                    route.route_text_color = null;
+                    route.route_url = null;
+                    route.route_type = mode;
+                    RoutesList.Add(route);
+                }
                 TransXChangeAnnotatedStopPointRef[] arrayOfStops = _txObject.StopPoints;
                 foreach (TransXChangeAnnotatedStopPointRef stop in arrayOfStops)
                 {
                     NaptanStop naptanStop = NaptanStops.Where(x => x.ATCOCode == stop.StopPointRef).FirstOrDefault(); //this lookup is really SLOW!! It takes up to 250ms?!
                     if (naptanStop == null)
                     {
-                        Debug.WriteLine(stop.StopPointRef + " was not found in the NaptanStops.csv file");
+                        Debug.WriteLine(stop.StopPointRef + " was not found in the Stops.csv file");
                     }
                     else
                     {
@@ -390,8 +414,8 @@ namespace TransXChange2GTFS_2
                             GTFSnaptanStop.stop_lon = naptanStop.Longitude;
                             GTFSnaptanStop.stop_url = "";
                             // need to extract this from naptan data.
-			    // 300 = bus
-			    // https://developers.google.com/transit/gtfs/reference/extended-route-types
+                            // 300 = bus
+                            // https://developers.google.com/transit/gtfs/reference/extended-route-types
                             //GTFSnaptanStop.vehicle_type = "3";
                             StopsList.Add(naptanStop);
                             GTFSStopsList.Add(GTFSnaptanStop);
@@ -489,6 +513,11 @@ namespace TransXChange2GTFS_2
             Console.WriteLine("Writing agency.txt");
             // write GTFS txts.
             // agency.txt, calendar.txt, calendar_dates.txt, routes.txt, stop_times.txt, stops.txt, trips.txt
+            if (Directory.Exists("output") == false)
+            {
+                Directory.CreateDirectory("output");
+            }
+
             TextWriter agencyTextWriter = File.CreateText(@"output/agency.txt");
             CsvWriter agencyCSVwriter = new CsvWriter(agencyTextWriter);
             agencyCSVwriter.WriteRecords(AgencyList);
