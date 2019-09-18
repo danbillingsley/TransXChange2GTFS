@@ -7,10 +7,11 @@
 
   <ItemGroup>
     <None Remove="Stops.csv" />
+    <None Remove="Stops_unzipthis.zip" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Stops.csv">
+    <Content Include="Stops_unzipthis.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
