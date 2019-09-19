@@ -72,9 +72,9 @@ namespace TransXChange2GTFS_2
                 NaPTANStopsDictionary.Add(naptanStop.ATCOCode, naptanStop);
             }
 
-            if (args == null)
+            if (args.Count() == 0)
             {
-                inputpath = @"put your input path here. It can be either a folder or a .zip.";
+                inputpath = @"point to a file here";
             }
             else
             {
@@ -343,23 +343,23 @@ namespace TransXChange2GTFS_2
                     }
 
                     // Go through stops
-                    DateTime stopsTime = new DateTime();
+                    TimeSpan stopsTime = new TimeSpan();
 
                     for (int j = 0; j < stopArray.Count; j++)
                     {
                         // First stop, just get the stop and departure time
                         if (j == 0)
                         {
-                            stopsTime = currentDepartureTime;
-                            stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
+                            stopsTime = currentDepartureTime.TimeOfDay;
+                            stopTimesArray.Add(stopsTime.ToString(@"hh\:mm\:ss"));
                         }
                         // For subsequent stops work out the time between stops
                         else
                         {
                             string timeGap = timeGapArray[j - 1].ToString();
                             TimeSpan ts = XmlConvert.ToTimeSpan(timeGap);
-                            stopsTime.Add(ts);
-                            stopTimesArray.Add(stopsTime.ToString("HH:mm:ss"));
+                            stopsTime = stopsTime.Add(ts);
+                            stopTimesArray.Add(stopsTime.ToString(@"hh\:mm\:ss"));
                         }
                     }
 
