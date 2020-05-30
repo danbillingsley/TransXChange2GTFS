@@ -2,22 +2,23 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Stops.csv" />
+    <None Remove="Stops.zip" />
     <None Remove="Stops_unzipthis.zip" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Stops_unzipthis.zip">
+    <Content Include="Stops.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="6.1.1" />
+    <PackageReference Include="CsvHelper" Version="15.0.5" />
   </ItemGroup>
 
 </Project>

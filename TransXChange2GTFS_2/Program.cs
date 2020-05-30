@@ -9,6 +9,7 @@ using CsvHelper;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Xml;
+using System.Globalization;
 // Reference to GTFS standard https://developers.google.com/transit/gtfs/reference/#agencytxt
 
 namespace TransXChange2GTFS_2
@@ -58,10 +59,10 @@ namespace TransXChange2GTFS_2
             Directory.CreateDirectory("temp");
 
             Console.WriteLine("Unzipping NaPTAN to a temporary folder.");
-            ZipFile.ExtractToDirectory(@"Stops_unzipthis.zip", "temp");
+            ZipFile.ExtractToDirectory(@"Stops.zip", "temp");
             using (TextReader textReader = File.OpenText("temp/Stops.csv"))
             {
-                CsvReader csvReader = new CsvReader(textReader);
+                CsvReader csvReader = new CsvReader(textReader, CultureInfo.InvariantCulture);
                 csvReader.Configuration.Delimiter = ",";
                 NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
             }
@@ -74,7 +75,7 @@ namespace TransXChange2GTFS_2
 
             if (args.Count() == 0)
             {
-                inputpath = @"point to a file here";
+                inputpath = @"path to TransXChange file here if you don't supply an argument";
             }
             else
             {
@@ -499,8 +500,8 @@ namespace TransXChange2GTFS_2
                             GTFSnaptanStop.stop_id = naptanStop.ATCOCode;
                             GTFSnaptanStop.stop_code = naptanStop.NaptanCode;
                             GTFSnaptanStop.stop_name = naptanStop.CommonName;
-                            GTFSnaptanStop.stop_lat = naptanStop.Latitude;
-                            GTFSnaptanStop.stop_lon = naptanStop.Longitude;
+                            GTFSnaptanStop.stop_lat = Math.Round(naptanStop.Latitude,6);
+                            GTFSnaptanStop.stop_lon = Math.Round(naptanStop.Longitude,6);
                             GTFSnaptanStop.stop_url = "";
                             // need to extract this from naptan data.
                             // 300 = bus
@@ -654,49 +655,49 @@ namespace TransXChange2GTFS_2
             }
 
             TextWriter agencyTextWriter = File.CreateText(@"output/agency.txt");
-            CsvWriter agencyCSVwriter = new CsvWriter(agencyTextWriter);
+            CsvWriter agencyCSVwriter = new CsvWriter(agencyTextWriter, CultureInfo.InvariantCulture);
             agencyCSVwriter.WriteRecords(AgencyList);
             agencyTextWriter.Dispose();
             agencyCSVwriter.Dispose();
 
             Console.WriteLine("Writing stops.txt");
             TextWriter stopsTextWriter = File.CreateText(@"output/stops.txt");
-            CsvWriter stopsCSVwriter = new CsvWriter(stopsTextWriter);
+            CsvWriter stopsCSVwriter = new CsvWriter(stopsTextWriter, CultureInfo.InvariantCulture);
             stopsCSVwriter.WriteRecords(GTFSStopsList);
             stopsTextWriter.Dispose();
             stopsCSVwriter.Dispose();
 
             Console.WriteLine("Writing routes.txt");
             TextWriter routesTextWriter = File.CreateText(@"output/routes.txt");
-            CsvWriter routesCSVwriter = new CsvWriter(routesTextWriter);
+            CsvWriter routesCSVwriter = new CsvWriter(routesTextWriter, CultureInfo.InvariantCulture);
             routesCSVwriter.WriteRecords(RoutesList);
             routesTextWriter.Dispose();
             routesCSVwriter.Dispose();
 
             Console.WriteLine("Writing trips.txt");
             TextWriter tripsTextWriter = File.CreateText(@"output/trips.txt");
-            CsvWriter tripsCSVwriter = new CsvWriter(tripsTextWriter);
+            CsvWriter tripsCSVwriter = new CsvWriter(tripsTextWriter, CultureInfo.InvariantCulture);
             tripsCSVwriter.WriteRecords(tripList);
             tripsTextWriter.Dispose();
             tripsCSVwriter.Dispose();
 
             Console.WriteLine("Writing calendar.txt");
             TextWriter calendarTextWriter = File.CreateText(@"output/calendar.txt");
-            CsvWriter calendarCSVwriter = new CsvWriter(calendarTextWriter);
+            CsvWriter calendarCSVwriter = new CsvWriter(calendarTextWriter, CultureInfo.InvariantCulture);
             calendarCSVwriter.WriteRecords(calendarList);
             calendarTextWriter.Dispose();
             calendarCSVwriter.Dispose();
 
             Console.WriteLine("Writing stop_times.txt");
             TextWriter stopTimeTextWriter = File.CreateText(@"output/stop_times.txt");
-            CsvWriter stopTimeCSVwriter = new CsvWriter(stopTimeTextWriter);
+            CsvWriter stopTimeCSVwriter = new CsvWriter(stopTimeTextWriter, CultureInfo.InvariantCulture);
             stopTimeCSVwriter.WriteRecords(stopTimesList);
             stopTimeTextWriter.Dispose();
             stopTimeCSVwriter.Dispose();
 
             Console.WriteLine("Writing calendar_dates.txt");
             TextWriter calendarDatesTextWriter = File.CreateText(@"output/calendar_dates.txt");
-            CsvWriter calendarDatesCSVwriter = new CsvWriter(calendarDatesTextWriter);
+            CsvWriter calendarDatesCSVwriter = new CsvWriter(calendarDatesTextWriter, CultureInfo.InvariantCulture);
             calendarDatesCSVwriter.WriteRecords(calendarExceptionsList);
             calendarDatesTextWriter.Dispose();
             calendarDatesCSVwriter.Dispose();
@@ -815,8 +816,8 @@ namespace TransXChange2GTFS_2
         public string stop_id { get; set; }
         public string stop_code { get; set; }
         public string stop_name { get; set; }
-        public double stop_lat { get; set; }
-        public double stop_lon { get; set; }
+        public decimal stop_lat { get; set; }
+        public decimal stop_lon { get; set; }
         public string stop_url { get; set; }
         //public string vehicle_type { get; set; }
     }
@@ -826,8 +827,8 @@ namespace TransXChange2GTFS_2
         public string ATCOCode { get; set; }
         public string NaptanCode { get; set; }
         public string CommonName { get; set; }
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
+        public decimal Latitude { get; set; }
+        public decimal Longitude { get; set; }
     }
 
     // A LIST OF THESE ROUTES CREATES THE GTFS routes.txt file.
