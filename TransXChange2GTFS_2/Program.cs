@@ -390,15 +390,21 @@ namespace TransXChange2GTFS_2
                 // Currently we assume that each route only has one operator
                 TransXChangeOperatorsOperator operatorDetails = _txObject.Operators.Operator;
 
+                string this_agency_id = operatorDetails.NationalOperatorCode;
+                if (operatorDetails.NationalOperatorCode == null)
+                {
+                    this_agency_id = operatorDetails.OperatorCode;
+                }
+
                 // Adding a new agency  
                 Agency agency = new Agency();
-                agency.agency_id = operatorDetails.NationalOperatorCode;
+                agency.agency_id = this_agency_id;
                 agency.agency_name = operatorDetails.OperatorShortName;
-                agency.agency_url = "https://www.google.com/search?q=" + operatorDetails.OperatorShortName; // google plus name of agency by default
+                agency.agency_url = "https://www.google.com/search?q=" + Uri.EscapeUriString(operatorDetails.OperatorShortName); // google plus name of agency by default
                 agency.agency_timezone = "Europe/London"; // Europe/London by default
 
                 // Check whether this agency is contained within the list
-                var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == operatorDetails.NationalOperatorCode);
+                var agencyCheck = AgencyList.FirstOrDefault(x => x.agency_id == this_agency_id);
                 if (agencyCheck == null)
                 {
                     AgencyList.Add(agency);
@@ -465,12 +471,13 @@ namespace TransXChange2GTFS_2
                     route.route_short_name = _txObject.Services.Service.Lines.Line.LineName;
                     route.route_long_name = Description;
                     route.route_id = routeId;
-                    route.agency_id = operatorDetails.NationalOperatorCode;
+                    route.agency_id = this_agency_id;
                     route.route_color = null;
                     route.route_desc = null;
                     route.route_text_color = null;
                     route.route_url = null;
                     route.route_type = mode;
+
                     RoutesList.Add(route);
                 }
                 TransXChangeAnnotatedStopPointRef[] arrayOfStops = _txObject.StopPoints;
@@ -512,7 +519,6 @@ namespace TransXChange2GTFS_2
                         }
                     }
                 }
-
 
                 // create calendar.txt, calendar_dates.txt, trips.txt, stop_times.txt from InternalRoutesList
                 InternalRoutesList = InternalRoutesList.OrderBy(x => x.Departure).ToList();
