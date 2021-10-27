@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Xml;
 using System.Globalization;
+using CsvHelper.Configuration;
 // Reference to GTFS standard https://developers.google.com/transit/gtfs/reference/#agencytxt
 
 namespace TransXChange2GTFS_2
@@ -58,13 +59,14 @@ namespace TransXChange2GTFS_2
             }
             Directory.CreateDirectory("temp");
 
-            Console.WriteLine("Unzipping NaPTAN to a temporary folder.");
-            ZipFile.ExtractToDirectory(@"Stops.zip", "temp");
-            using (TextReader textReader = File.OpenText("temp/Stops.csv"))
+            Console.WriteLine("Loading NaPTAN from Stops.zip.");
+            using (ZipArchive archive = new ZipArchive(File.OpenRead(@"Stops.zip")))
             {
-                CsvReader csvReader = new CsvReader(textReader, CultureInfo.InvariantCulture);
-                csvReader.Configuration.Delimiter = ",";
-                NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
+                using (StreamReader streamReader = new StreamReader(archive.Entries.Where(x => x.Name == "Stops.csv").First().Open()))
+                {
+                    CsvReader csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
+                    NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
+                }
             }
 
             Console.WriteLine("Reading NaPTAN and creating an ATCOcode keyed dictionary of NaPTAN stops.");
@@ -85,18 +87,19 @@ namespace TransXChange2GTFS_2
             if (inputpath.EndsWith(".zip"))
             {
                 Console.WriteLine("Unzipping TransXChange collection to a temporary folder.");
-                ZipFile.ExtractToDirectory(inputpath, "temp");
-                foreach (string filePath in Directory.EnumerateFiles(@"temp", "*.xml"))
+                using (ZipArchive archive = new ZipArchive(File.OpenRead(inputpath)))
                 {
-                    convertTransXChange2GTFS(filePath);
+                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    {
+                        convertTransXChange2GTFS(entry.Open(), entry.Name);
+                    }
                 }
-                Directory.Delete("temp", true);
             }
             else
             {
                 foreach (string filePath in Directory.EnumerateFiles(@"input", "*.xml"))
                 {
-                    convertTransXChange2GTFS(filePath);
+                    convertTransXChange2GTFS(File.OpenRead(filePath), filePath);
                 }
             }
 
@@ -106,22 +109,19 @@ namespace TransXChange2GTFS_2
 
         }
 
-        static void convertTransXChange2GTFS(string filePath)
+        static void convertTransXChange2GTFS(Stream fileStream, string fileName)
         {
-            Console.WriteLine("Converting " + filePath);
+            Console.WriteLine($"Converting {fileName}.");
             InternalRoutesList = new List<InternalRoute>();
-            string XMLAsAString = File.ReadAllText(filePath, Encoding.UTF8);
-            byte[] byteArray = Encoding.UTF8.GetBytes(XMLAsAString);
-            MemoryStream stream = new MemoryStream(byteArray);
             XmlSerializer serializer = new XmlSerializer(typeof(TransXChange));
-            TransXChange _txObject;
+            TransXChange _txObject; 
             try
             {
-                _txObject = (TransXChange)serializer.Deserialize(stream);
+                _txObject = (TransXChange)serializer.Deserialize(fileStream);
             }
             catch
             {
-                Console.WriteLine($"Couldn't convert {filePath}. This is most likely because the TransXChange file was not in the expected form. If this error is frequent you'll need to investigate it.");
+                Console.WriteLine($"Couldn't convert {fileName}. This is most likely because the TransXChange file was not in the expected form. If this error is frequent you'll need to investigate it.");
                 return;
             }
             // Creating a journey patterns object
@@ -585,7 +585,7 @@ namespace TransXChange2GTFS_2
                     TimeSpan PreviousStopDepartureTime = new TimeSpan(0);
 
                     for (var j = 0; j < InternalRoute.Stops.Count; j++)
-                    {
+                    {  
                         StopTime newStopTime = new StopTime();
                         newStopTime.trip_id = newTrip.trip_id; //InternalRoute.Service + "-" + internalRouteIndex;
                         newStopTime.stop_id = InternalRoute.Stops[j];
@@ -603,8 +603,8 @@ namespace TransXChange2GTFS_2
                         if (JourneyStartedYesterdayFlag == true)
                         {
                             TimeSpan UpdatedDepartureTimeAsTimeSpan = DepartureTimeAsTimeSpan.Add(new TimeSpan(24, 0, 0));
-                            newStopTime.arrival_time = Math.Round(UpdatedDepartureTimeAsTimeSpan.TotalHours, 0).ToString() + UpdatedDepartureTimeAsTimeSpan.ToString(@"hh\:mm\:ss").Substring(2, 6);
-                            newStopTime.departure_time = Math.Round(UpdatedDepartureTimeAsTimeSpan.TotalHours, 0).ToString() + UpdatedDepartureTimeAsTimeSpan.ToString(@"hh\:mm\:ss").Substring(2, 6);
+                            newStopTime.arrival_time = Math.Floor(UpdatedDepartureTimeAsTimeSpan.TotalHours).ToString() + UpdatedDepartureTimeAsTimeSpan.ToString(@"hh\:mm\:ss").Substring(2, 6);
+                            newStopTime.departure_time = Math.Floor(UpdatedDepartureTimeAsTimeSpan.TotalHours).ToString() + UpdatedDepartureTimeAsTimeSpan.ToString(@"hh\:mm\:ss").Substring(2, 6);                       
                         }
                         else
                         {
@@ -660,60 +660,76 @@ namespace TransXChange2GTFS_2
                 Directory.CreateDirectory("output");
             }
 
-            TextWriter agencyTextWriter = File.CreateText(@"output/agency.txt");
-            CsvWriter agencyCSVwriter = new CsvWriter(agencyTextWriter, CultureInfo.InvariantCulture);
-            agencyCSVwriter.WriteRecords(AgencyList);
-            agencyTextWriter.Dispose();
-            agencyCSVwriter.Dispose();
+            TextWriter TextWriter;
+            CsvWriter CSVwriter;
+            using (TextWriter = File.CreateText(@"output/agency.txt"))
+            {
+                using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
+                {
+                    CSVwriter.WriteRecords(AgencyList);
+                }
+            }
 
             Console.WriteLine("Writing stops.txt");
-            TextWriter stopsTextWriter = File.CreateText(@"output/stops.txt");
-            CsvWriter stopsCSVwriter = new CsvWriter(stopsTextWriter, CultureInfo.InvariantCulture);
-            stopsCSVwriter.WriteRecords(GTFSStopsList);
-            stopsTextWriter.Dispose();
-            stopsCSVwriter.Dispose();
+            using (TextWriter = File.CreateText(@"output/stops.txt"))
+            {
+                using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
+                {
+                    CSVwriter.WriteRecords(GTFSStopsList);
+                }
+            }
 
             Console.WriteLine("Writing routes.txt");
-            TextWriter routesTextWriter = File.CreateText(@"output/routes.txt");
-            CsvWriter routesCSVwriter = new CsvWriter(routesTextWriter, CultureInfo.InvariantCulture);
-            routesCSVwriter.WriteRecords(RoutesList);
-            routesTextWriter.Dispose();
-            routesCSVwriter.Dispose();
+            using (TextWriter = File.CreateText(@"output/routes.txt"))
+            {
+                using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
+                {
+                    CSVwriter.WriteRecords(RoutesList);
+                }
+            }
 
             Console.WriteLine("Writing trips.txt");
-            TextWriter tripsTextWriter = File.CreateText(@"output/trips.txt");
-            CsvWriter tripsCSVwriter = new CsvWriter(tripsTextWriter, CultureInfo.InvariantCulture);
-            tripsCSVwriter.WriteRecords(tripList);
-            tripsTextWriter.Dispose();
-            tripsCSVwriter.Dispose();
+            using (TextWriter = File.CreateText(@"output/trips.txt"))
+            {
+                using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
+                {
+                    CSVwriter.WriteRecords(tripList);
+                }
+            }
 
             Console.WriteLine("Writing calendar.txt");
-            TextWriter calendarTextWriter = File.CreateText(@"output/calendar.txt");
-            CsvWriter calendarCSVwriter = new CsvWriter(calendarTextWriter, CultureInfo.InvariantCulture);
-            calendarCSVwriter.WriteRecords(calendarList);
-            calendarTextWriter.Dispose();
-            calendarCSVwriter.Dispose();
-
-            Console.WriteLine("Writing stop_times.txt");
-            TextWriter stopTimeTextWriter = File.CreateText(@"output/stop_times.txt");
-            CsvWriter stopTimeCSVwriter = new CsvWriter(stopTimeTextWriter, CultureInfo.InvariantCulture);
-            stopTimeCSVwriter.WriteRecords(stopTimesList);
-            stopTimeTextWriter.Dispose();
-            stopTimeCSVwriter.Dispose();
+            using (TextWriter = File.CreateText(@"output/calendar.txt"))
+            {
+                using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
+                {
+                    CSVwriter.WriteRecords(calendarList);
+                }
+            }
 
             Console.WriteLine("Writing calendar_dates.txt");
-            TextWriter calendarDatesTextWriter = File.CreateText(@"output/calendar_dates.txt");
-            CsvWriter calendarDatesCSVwriter = new CsvWriter(calendarDatesTextWriter, CultureInfo.InvariantCulture);
-            calendarDatesCSVwriter.WriteRecords(calendarExceptionsList);
-            calendarDatesTextWriter.Dispose();
-            calendarDatesCSVwriter.Dispose();
-
-            Console.WriteLine("Creating a valid GTFS .zip file.");
-            if (File.Exists($"{Path.GetFileNameWithoutExtension(inputpath)}_GTFS.zip"))
+            using (TextWriter = File.CreateText(@"output/calendar_dates.txt"))
             {
-                File.Delete($"{Path.GetFileNameWithoutExtension(inputpath)}_GTFS.zip");
+                using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
+                {
+                    CSVwriter.WriteRecords(calendarExceptionsList);
+                }
             }
-            ZipFile.CreateFromDirectory("output", $"{Path.GetFileNameWithoutExtension(inputpath)}_GTFS.zip", CompressionLevel.Optimal, false, Encoding.UTF8);
+
+            Console.WriteLine("Writing stop_times.txt");
+            using (TextWriter = File.CreateText(@"output/stop_times.txt"))
+            {
+                using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
+                {
+                    CSVwriter.WriteRecords(stopTimesList);
+                }
+            }
+
+            Console.WriteLine("Creating a GTFS .zip file.");
+            if (File.Exists("output.zip"))
+            {
+                File.Delete("output.zip");
+            }
+            ZipFile.CreateFromDirectory("output", "output.zip", CompressionLevel.Optimal, false, Encoding.UTF8);
         }
 
         // Creates a text file showing a summary of results
