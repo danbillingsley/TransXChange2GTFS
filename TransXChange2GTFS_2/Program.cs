@@ -37,7 +37,7 @@ namespace TransXChange2GTFS_2
         static string inputpath;
 
         // default for open ended end date
-        const string DEFAULT_END_DATE = "20200101";
+        const string DEFAULT_END_DATE = "20230101";
 
 
         static void Main(string[] args)
