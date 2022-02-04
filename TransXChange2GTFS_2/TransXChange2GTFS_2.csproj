@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,12 +9,6 @@
     <None Remove="Stops.csv" />
     <None Remove="Stops.zip" />
     <None Remove="Stops_unzipthis.zip" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Stops.zip">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>

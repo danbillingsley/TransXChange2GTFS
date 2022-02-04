@@ -39,6 +39,8 @@ namespace TransXChange2GTFS_2
         // default for open ended end date
         const string DEFAULT_END_DATE = "20230101";
 
+        // Data directory
+        const string DATA_DIR = "data";
 
         static void Main(string[] args)
         {
@@ -60,7 +62,7 @@ namespace TransXChange2GTFS_2
             Directory.CreateDirectory("temp");
 
             Console.WriteLine("Loading NaPTAN from Stops.zip.");
-            using (ZipArchive archive = new ZipArchive(File.OpenRead(@"Stops.zip")))
+            using (ZipArchive archive = new ZipArchive(File.OpenRead(@$"{DATA_DIR}/Stops.zip")))
             {
                 using (StreamReader streamReader = new StreamReader(archive.Entries.Where(x => x.Name == "Stops.csv").First().Open()))
                 {
@@ -97,7 +99,7 @@ namespace TransXChange2GTFS_2
             }
             else
             {
-                foreach (string filePath in Directory.EnumerateFiles(@"input", "*.xml"))
+                foreach (string filePath in Directory.EnumerateFiles(@$"{DATA_DIR}/input", "*.xml"))
                 {
                     convertTransXChange2GTFS(File.OpenRead(filePath), filePath);
                 }
@@ -655,14 +657,14 @@ namespace TransXChange2GTFS_2
             Console.WriteLine("Writing agency.txt");
             // write GTFS txts.
             // agency.txt, calendar.txt, calendar_dates.txt, routes.txt, stop_times.txt, stops.txt, trips.txt
-            if (Directory.Exists("output") == false)
+            if (Directory.Exists($"{DATA_DIR}/output") == false)
             {
-                Directory.CreateDirectory("output");
+                Directory.CreateDirectory($"{DATA_DIR}/output");
             }
 
             TextWriter TextWriter;
             CsvWriter CSVwriter;
-            using (TextWriter = File.CreateText(@"output/agency.txt"))
+            using (TextWriter = File.CreateText(@$"{DATA_DIR}/output/agency.txt"))
             {
                 using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
                 {
@@ -671,7 +673,7 @@ namespace TransXChange2GTFS_2
             }
 
             Console.WriteLine("Writing stops.txt");
-            using (TextWriter = File.CreateText(@"output/stops.txt"))
+            using (TextWriter = File.CreateText(@$"{DATA_DIR}/output/stops.txt"))
             {
                 using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
                 {
@@ -680,7 +682,7 @@ namespace TransXChange2GTFS_2
             }
 
             Console.WriteLine("Writing routes.txt");
-            using (TextWriter = File.CreateText(@"output/routes.txt"))
+            using (TextWriter = File.CreateText(@$"{DATA_DIR}/output/routes.txt"))
             {
                 using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
                 {
@@ -689,7 +691,7 @@ namespace TransXChange2GTFS_2
             }
 
             Console.WriteLine("Writing trips.txt");
-            using (TextWriter = File.CreateText(@"output/trips.txt"))
+            using (TextWriter = File.CreateText(@$"{DATA_DIR}/output/trips.txt"))
             {
                 using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
                 {
@@ -698,7 +700,7 @@ namespace TransXChange2GTFS_2
             }
 
             Console.WriteLine("Writing calendar.txt");
-            using (TextWriter = File.CreateText(@"output/calendar.txt"))
+            using (TextWriter = File.CreateText(@$"{DATA_DIR}/output/calendar.txt"))
             {
                 using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
                 {
@@ -707,7 +709,7 @@ namespace TransXChange2GTFS_2
             }
 
             Console.WriteLine("Writing calendar_dates.txt");
-            using (TextWriter = File.CreateText(@"output/calendar_dates.txt"))
+            using (TextWriter = File.CreateText(@$"{DATA_DIR}/output/calendar_dates.txt"))
             {
                 using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
                 {
@@ -716,7 +718,7 @@ namespace TransXChange2GTFS_2
             }
 
             Console.WriteLine("Writing stop_times.txt");
-            using (TextWriter = File.CreateText(@"output/stop_times.txt"))
+            using (TextWriter = File.CreateText(@$"{DATA_DIR}/output/stop_times.txt"))
             {
                 using (CSVwriter = new CsvWriter(TextWriter, CultureInfo.InvariantCulture))
                 {
@@ -725,11 +727,11 @@ namespace TransXChange2GTFS_2
             }
 
             Console.WriteLine("Creating a GTFS .zip file.");
-            if (File.Exists("output.zip"))
+            if (File.Exists($"{DATA_DIR}/output.zip"))
             {
-                File.Delete("output.zip");
+                File.Delete($"{DATA_DIR}/output.zip");
             }
-            ZipFile.CreateFromDirectory("output", "output.zip", CompressionLevel.Optimal, false, Encoding.UTF8);
+            ZipFile.CreateFromDirectory($"{DATA_DIR}/output", $"{DATA_DIR}/output.zip", CompressionLevel.Optimal, false, Encoding.UTF8);
         }
 
         // Creates a text file showing a summary of results
@@ -737,7 +739,7 @@ namespace TransXChange2GTFS_2
         {
             int totalRoutesProcessed = routesSuccessProcessing.Count() + routesFailingProcessing.Count();
             string text = "Total routes processed: " + totalRoutesProcessed + "\r\nRoutes processed successfully: " + routesSuccessProcessing.Count() + "\r\nRoutes failing processing: " + routesFailingProcessing.Count() + "\r\nFailed routes:\r\n" + String.Join("\r\n", routesFailingProcessing.ToArray());
-            System.IO.File.WriteAllText(@"output/report.txt", text);
+            System.IO.File.WriteAllText(@$"{DATA_DIR}/output/report.txt", text);
         }
 
         static int ObjectToInt(object input)
