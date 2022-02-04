@@ -11,6 +11,10 @@ using System.IO.Compression;
 using System.Xml;
 using System.Globalization;
 using CsvHelper.Configuration;
+using GeoUK;
+using GeoUK.Projections;
+using GeoUK.Coordinates;
+using GeoUK.Ellipsoids;
 // Reference to GTFS standard https://developers.google.com/transit/gtfs/reference/#agencytxt
 
 namespace TransXChange2GTFS_2
@@ -67,6 +71,7 @@ namespace TransXChange2GTFS_2
                 using (StreamReader streamReader = new StreamReader(archive.Entries.Where(x => x.Name == "Stops.csv").First().Open()))
                 {
                     CsvReader csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
+                    csvReader.Context.RegisterClassMap<NaptanStopMap>();
                     NaptanStops = csvReader.GetRecords<NaptanStop>().ToList();
                 }
             }
@@ -853,6 +858,51 @@ namespace TransXChange2GTFS_2
         public string CommonName { get; set; }
         public decimal Latitude { get; set; }
         public decimal Longitude { get; set; }
+    }
+
+    public sealed class NaptanStopMap : ClassMap<NaptanStop>
+    {
+        public NaptanStopMap()
+        {
+            Map(m => m.ATCOCode);
+            Map(m => m.NaptanCode);
+            Map(m => m.CommonName);
+            Map(m => m.Latitude).Convert(row => {
+              string latitude = row.Row.GetField("Latitude");
+              try {
+                  return decimal.Parse(latitude, CultureInfo.InvariantCulture);
+              } catch {
+                  // https://github.com/IeuanWalker/GeoUK
+                  double easting = double.Parse(row.Row.GetField("Easting"), CultureInfo.InvariantCulture);
+                  double northing = double.Parse(row.Row.GetField("Northing"), CultureInfo.InvariantCulture);
+                  Cartesian cartesian = GeoUK.Convert.ToCartesian(new Airy1830 (),
+                      new BritishNationalGrid(),
+                      new EastingNorthing(easting, northing)
+                  );
+                  Cartesian wgsCartesian = Transform.Osgb36ToEtrs89(cartesian); //ETRS89 is effectively WGS84
+                  LatitudeLongitude wgsLatLong = GeoUK.Convert.ToLatitudeLongitude(new Wgs84(), wgsCartesian);
+                  return (decimal)wgsLatLong.Latitude;
+                  // return wgsLatLong.Latitude;
+              }
+            });
+            Map(m => m.Longitude).Convert(row => {
+              string longitude = row.Row.GetField("Longitude");
+              try {
+                return decimal.Parse(longitude, CultureInfo.InvariantCulture);
+              } catch {
+                  // https://github.com/IeuanWalker/GeoUK
+                  double easting = double.Parse(row.Row.GetField("Easting"), CultureInfo.InvariantCulture);
+                  double northing = double.Parse(row.Row.GetField("Northing"), CultureInfo.InvariantCulture);
+                  Cartesian cartesian = GeoUK.Convert.ToCartesian(new Airy1830 (),
+                      new BritishNationalGrid(),
+                      new EastingNorthing(easting, northing)
+                  );
+                  Cartesian wgsCartesian = Transform.Osgb36ToEtrs89(cartesian); //ETRS89 is effectively WGS84
+                  LatitudeLongitude wgsLatLong = GeoUK.Convert.ToLatitudeLongitude(new Wgs84(), wgsCartesian);
+                  return (decimal)wgsLatLong.Longitude;
+              }
+            });
+        }
     }
 
     // A LIST OF THESE ROUTES CREATES THE GTFS routes.txt file.
