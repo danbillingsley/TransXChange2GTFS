@@ -48,6 +48,7 @@ namespace TransXChange2GTFS_2
 
         static void Main(string[] args)
         {
+            // TODO Move to config file of some sort...
             bankHolidayDates.AllBankHolidays = new List<string>(new string[] { "20180101", "20180330", "20180402", "20180507", "20180528", "20180827", "20181225", "20181226" });
             bankHolidayDates.GoodFriday = "20180330";
             bankHolidayDates.LateSummerBankHolidayNotScotland = "20180827";
@@ -407,7 +408,7 @@ namespace TransXChange2GTFS_2
                 Agency agency = new Agency();
                 agency.agency_id = this_agency_id;
                 agency.agency_name = operatorDetails.OperatorShortName;
-                agency.agency_url = "https://www.google.com/search?q=" + Uri.EscapeUriString(operatorDetails.OperatorShortName); // google plus name of agency by default
+                agency.agency_url = "https://www.google.com/search?q=" + Uri.EscapeDataString(operatorDetails.OperatorShortName); // google plus name of agency by default
                 agency.agency_timezone = "Europe/London"; // Europe/London by default
 
                 // Check whether this agency is contained within the list
