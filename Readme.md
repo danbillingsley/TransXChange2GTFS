@@ -34,6 +34,20 @@ A previous version of this parser was written for UWP (Universal Windows). This 
 ## Example
 An example of GTFS output from the tool is contained within yorkshireGTFS.zip. This contains schedules for all bus routes in Yorkshire on 06/03/2018.
 
+## Docker Image
+
+### Running the docker image
+
+```bash
+docker run -it --rm -v $(pwd)/data:/app/data open-innovations/transxchange2gtfs 
+```
+
+### Building the docker image
+
+```bash
+docker build -t open-innovations/transxchange2gtfs .
+```
+
 ## License
 MIT license. Use it for whatever you like. Attribution to ODILeeds, Thomas Forth, and Daniel Billingsley. Copyright Thomas Forth and Daniel Billingsley.
 Example TransXChange files are from the Traveline National Dataset and are used under the [Open Government License v3](http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
