@@ -12,13 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Stops.zip">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="CsvHelper" Version="27.1.1" />
+    <PackageReference Include="IeuanWalker.GeoUK" Version="1.0.5" />
   </ItemGroup>
 
 </Project>

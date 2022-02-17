@@ -21,6 +21,7 @@ GTFS is designed for sharing the timetables of a transit authority or a single o
 National Public Transport Access Nodes (NaPTAN) is the national system for uniquely identifying points of access to public transport in England, Scotland and Wales. We have included a compressed extract of the complete NaPTAN stops dataset (from 20/04/2018) in this project. This must be unzipped before running the code. This dataset is updated daily and up-to-date data can be obtained [here](http://naptan.app.dft.gov.uk/datarequest/help). 
 
 ## Running the code
+Set up the `data` directory as listed in the [README](./data/README.md).
 You'll need some TransXChange files, get them from Traveline Open Data. TransXChange format files can change with time, this parser works with most files we tested it with in February 2018. I can't guarantee it'll work into the future.
 
 .NET Core 2 code can run on just about any computer. Linux, Mac, Windows on Arm and Intel and AMD processors. Microsoft will have a good guide to doing that. We include the Visual Studio Solution to help you. We did this work on Windows, but it may work with the Mac version.
@@ -32,6 +33,20 @@ A previous version of this parser was written for UWP (Universal Windows). This 
 
 ## Example
 An example of GTFS output from the tool is contained within yorkshireGTFS.zip. This contains schedules for all bus routes in Yorkshire on 06/03/2018.
+
+## Docker Image
+
+### Running the docker image
+
+```bash
+docker run -it --rm -v $(pwd)/data:/app/data open-innovations/transxchange2gtfs 
+```
+
+### Building the docker image
+
+```bash
+docker build -t open-innovations/transxchange2gtfs .
+```
 
 ## License
 MIT license. Use it for whatever you like. Attribution to ODILeeds, Thomas Forth, and Daniel Billingsley. Copyright Thomas Forth and Daniel Billingsley.
